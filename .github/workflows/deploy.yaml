@@ -27,11 +27,11 @@ jobs:
         run: |
           pnpm install
           pnpm -r build
-          mkdir -p build
-          cp sources/**/*user.js build/
+          mkdir -p out
+          cp ./sources/**/*user.js out/
       - name: Deploy
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           branch: gh-pages
-          folder: build
+          folder: out

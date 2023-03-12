@@ -16,6 +16,6 @@
 // @namespace https://github.com/seia-soto/userscripts
 // @homepageURL https://github.com/seia-soto/userscripts
 // @supportURL https://github.com/seia-soto/userscripts
-// @updateURL https://seia-soto.github.io/userscripts/adshield.user.js
-// @downloadURL https://seia-soto.github.io/userscripts/adshield.user.js
+// @updateURL https://seia-soto.github.io/userscripts/asdefuser.user.js
+// @downloadURL https://seia-soto.github.io/userscripts/asdefuser.user.js
 // ==/UserScript==

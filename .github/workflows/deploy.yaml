@@ -30,6 +30,7 @@ jobs:
           mkdir -p out
           cp ./sources/**/*user.js out/
       - name: Tree
+        if: always()
         run: |
           tree -L 4 -N ./ -I node_modules
       - name: Deploy

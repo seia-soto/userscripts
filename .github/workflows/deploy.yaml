@@ -14,12 +14,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: shaunco/ssh-agent@git-repo-mapping # this action will configure git to use the right SSH key per each repository. 
+      - uses: webfactory/ssh-agent@v0.7.0
         with:
-          ssh-private-key: |
-            ${{ secrets.ACCESS_KEY }}
-          repo-mappings: |
-            github.com/seia-soto/adshield-defuser
+          ssh-private-key: ${{ secrets.ACCESS_KEY }}
       - uses: actions/setup-node@v3
         with:
           node-version: 18

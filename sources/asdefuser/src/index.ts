@@ -39,8 +39,34 @@ const useDocumentReady = async (document: Document) => {
 	});
 };
 
-const usePayload = async () => {
-	const script = document.querySelector('script[data]:not([data=""])');
+const usePayload = async (pre?: HTMLScriptElement) => {
+	console.debug('html:pre');
+
+	let script = pre;
+
+	if (!script) {
+		console.debug('html:post');
+
+		await useDocumentReady(document);
+
+		const post: HTMLScriptElement = document.querySelector('script[data]:not([data=""])')!;
+
+		script = post;
+	}
+
+	if (!script) {
+		console.debug('html:live');
+
+		const response = await fetch('/index.html');
+		const content = await response.text();
+
+		const div = document.createElement('div');
+		div.innerHTML = content;
+
+		const live: HTMLScriptElement = div.querySelector('script[data]:not([data=""])')!;
+
+		script = live;
+	}
 
 	if (!script) {
 		throw new Error('DEFUSER_TARGET_NOT_FOUND');
@@ -54,15 +80,18 @@ const usePayload = async () => {
 	}
 
 	try {
+		console.debug('bin:cached');
+
 		return asKit.getDecoded(binary, cache.source);
 	} catch (e) {
-		console.debug('failed to apply cached source');
-		console.error(e);
+		console.debug('bin:cached', e);
 	}
 
 	if (!source) {
 		throw new Error('DEFUSER_TARGET_SOURCE_NOT_FOUND');
 	}
+
+	console.debug('bin:live');
 
 	const response = await fetch(source);
 	const content = await response.text();
@@ -71,6 +100,10 @@ const usePayload = async () => {
 };
 
 const restoreV1 = (entries: ReturnType<typeof asKit['getDecoded']>['details']) => {
+	console.debug('restore:v1');
+
+	let failed = 0;
+
 	for (const entry of entries) {
 		try {
 			const node = document.querySelector(`#${entry.id}`);
@@ -82,24 +115,25 @@ const restoreV1 = (entries: ReturnType<typeof asKit['getDecoded']>['details']) =
 			node.before(entry.text);
 			node.remove();
 		} catch (error) {
-			console.warn('failed to restore node');
-			console.warn(error);
+			console.debug('restore:v1 error=', error);
+
+			failed++;
 		}
 	}
+
+	console.debug(`restore:v1 total=${entries.length} failed=${failed}`);
 };
 
-(async () => {
-	const switchParseInt = useDisableMethod(window, 'parseInt', () => {
-		switchParseInt();
-	});
+const bootstrap = async (pre?: HTMLScriptElement) => {
+	const payload = await usePayload(pre);
 
-	await useDocumentReady(document);
-
-	const payload = await usePayload();
+	console.debug('payload', payload);
 
 	if (payload.meta.version?.wireType !== asKit.ProtobufWireTypes.Uint32) {
 		throw new Error('DEFUSER_UNSUPPORTED_PAYLOAD_VERSION');
 	}
+
+	await useDocumentReady(document);
 
 	switch (payload.meta.version.value) {
 		case 1: {
@@ -112,4 +146,12 @@ const restoreV1 = (entries: ReturnType<typeof asKit['getDecoded']>['details']) =
 			throw new Error('DEFUSER_UNSUPPORTED_PAYLOAD_VERSION');
 		}
 	}
+};
+
+(() => {
+	useDisableMethod(window, '__SENTRY_BROWSER_BUNDLE__');
+
+	const pre: HTMLScriptElement = document.querySelector('script[data]:not([data=""])')!;
+
+	void bootstrap(pre);
 })();

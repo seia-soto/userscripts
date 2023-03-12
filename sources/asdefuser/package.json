@@ -1,17 +1,18 @@
 {
   "name": "asdefuser",
-  "version": "0.0.0",
+  "version": "0.4.1",
   "description": "",
   "type": "module",
   "scripts": {
     "build": "pnpm bundle",
-    "bundle": "esbuild src/index.ts --bundle --minify --outfile=./out/asdefuser.user.js --banner:js=\"$(cat ./banner.txt)\""
+    "bundle": "esbuild src/index.ts --bundle --minify --define:global=window --inject:./esbuild.inject.ts --banner:js=\"$(cat ./banner.txt)\" --target=es2018,chrome68,safari13,firefox88 --outfile=./out/asdefuser.user.js"
   },
   "keywords": [],
   "author": "HoJeong Go <seia@outlook.kr>",
   "license": "MIT",
   "dependencies": {
-    "adshield-defuser": "github:seia-soto/adshield-defuser#v0.0.2"
+    "adshield-defuser": "github:seia-soto/adshield-defuser#v0.0.3",
+    "buffer": "^6.0.3"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": ">=5.43.0",

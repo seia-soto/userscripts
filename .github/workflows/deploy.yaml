@@ -28,7 +28,7 @@ jobs:
           pnpm install
           pnpm -r build
           mkdir -p out
-          cp ./sources/**/*user.js out/
+          find ./ -name "*.user.js" -type f -exec cp {} ./out \;
       - name: Tree
         if: always()
         run: |

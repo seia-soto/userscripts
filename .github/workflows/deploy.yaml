@@ -29,6 +29,9 @@ jobs:
           pnpm -r build
           mkdir -p out
           cp ./sources/**/*user.js out/
+      - name: Tree
+        run: |
+          tree -L 4 -N ./ -I node_modules
       - name: Deploy
         uses: JamesIves/github-pages-deploy-action@v4
         with:

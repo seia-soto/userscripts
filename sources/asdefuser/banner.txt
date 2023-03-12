@@ -1,0 +1,21 @@
+// ==UserScript==
+// @encoding utf-8
+// @name AdShield Defuser
+// @description Provides mitigation for AdShield trackers and advertisement services.
+// @author HoJeong Go <seia@outlook.kr>
+// @version 0.4.0
+//
+// @grant none
+// @run-at document-start
+//
+// @match https://sportalkorea.com/*
+// @match https://*.sportalkorea.com/*
+// @match http://feedclick.net/*
+// @match https://feedclick.net/*
+//
+// @namespace https://github.com/seia-soto/userscripts
+// @homepageURL https://github.com/seia-soto/userscripts
+// @supportURL https://github.com/seia-soto/userscripts
+// @updateURL https://seia-soto.github.io/userscripts/adshield.user.js
+// @downloadURL https://seia-soto.github.io/userscripts/adshield.user.js
+// ==/UserScript==

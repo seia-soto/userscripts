@@ -1,0 +1,11 @@
+{
+  "name": "userscripts",
+  "author": "HoJeong Go <seia@outlook.kr>",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^18.15.0",
+    "esbuild": "^0.17.11",
+    "terser": "^5.16.6",
+    "typescript": "^4.9.5"
+  }
+}

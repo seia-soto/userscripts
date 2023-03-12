@@ -1,0 +1,42 @@
+name: Build and Deploy
+
+on:
+  push:
+    paths:
+      - '**.ts'
+    branches:
+      - master
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    concurrency: ci-${{ github.ref }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: shaunco/ssh-agent@git-repo-mapping # this action will configure git to use the right SSH key per each repository. 
+        with:
+          ssh-private-key: |
+            ${{ secrets.ACCESS_KEY }}
+          repo-mappings: |
+            github.com/seia-soto/adshield-defuser
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 7.14.2
+      - name: Build
+        run: |
+          pnpm install
+          pnpm -r build
+          mkdir -p build
+          cp sources/**/*user.js build/
+      - name: Deploy
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          branch: gh-pages
+          folder: build

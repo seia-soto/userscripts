@@ -3,8 +3,6 @@ import {useDebug, useDisableMethod, useDocumentReady} from '../utils.js';
 
 const debug = useDebug('[asdefuser:basera1n]');
 
-const test = (binary: string) => !isNaN(parseInt(binary.slice(0, 2), 16));
-
 const extract = async (pre?: HTMLScriptElement) => {
 	debug('html:pre');
 
@@ -28,10 +26,6 @@ const extract = async (pre?: HTMLScriptElement) => {
 
 	if (!binary) {
 		throw new Error('DEFUSER_BASERA1N_TARGET_DATA_NOT_FOUND');
-	}
-
-	if (!test(binary)) {
-		throw new Error('DEFUSER_BASERA1N_TARGET_DATA_NOT_SUPPORTED');
 	}
 
 	return asKit.decode(binary);

@@ -1,4 +1,4 @@
-import * as asKit from 'adshield-defuser';
+import * as asKit from 'adshield-defuser/out/loaders/shortwave.js';
 import * as fss from 'fs';
 import * as fs from 'fs/promises';
 import * as readline from 'readline/promises';
@@ -55,10 +55,6 @@ const getOutput = async () => {
 	}
 
 	const output = await getOutput();
-
-	if (!fss.existsSync(output)) {
-		throw new Error('Output not found!');
-	}
 
 	await fs.writeFile(output, `/* eslint-disable */
 export const source = {

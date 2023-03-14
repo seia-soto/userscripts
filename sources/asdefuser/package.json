@@ -4,14 +4,15 @@
   "description": "",
   "type": "module",
   "scripts": {
-    "build": "pnpm bundle",
+    "build": "pnpm shortwave:cache && pnpm bundle",
+    "shortwave:cache": "OUTPUT=$(readlink -f ./src/__generated__/shortwave.cache.ts) node scripts/generateShortwaveCache.mjs",
     "bundle": "esbuild src/index.ts --bundle --minify --define:global=window --inject:./esbuild.inject.ts --banner:js=\"$(cat ./banner.txt)\" --target=es2018,chrome68,safari13,firefox88 --outfile=./out/asdefuser.user.js"
   },
   "keywords": [],
   "author": "HoJeong Go <seia@outlook.kr>",
   "license": "MIT",
   "dependencies": {
-    "adshield-defuser": "github:seia-soto/adshield-defuser#v0.0.5",
+    "adshield-defuser": "github:seia-soto/adshield-defuser#v0.0.8",
     "buffer": "^6.0.3"
   },
   "devDependencies": {

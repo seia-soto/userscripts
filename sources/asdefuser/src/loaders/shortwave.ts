@@ -4,50 +4,63 @@ import * as cache from '../__generated__/shortwave.cache.js';
 
 const debug = useDebug('[asdefuser:shortwave]');
 
-const extract = async (pre?: HTMLScriptElement) => {
+const extract = async () => {
+	let source: {
+		script: string;
+		data: string;
+	} | undefined;
+
+	const useSelector = () => {
+		const target: HTMLScriptElement = document.querySelector('script[data]:not([data=""])')!;
+
+		if (target) {
+			const script = target.getAttribute('src');
+			const data = target.getAttribute('data');
+
+			if (script && data) {
+				source = {
+					script,
+					data,
+				};
+			}
+		}
+	};
+
 	debug('html:pre');
+	useSelector();
 
-	let script = pre;
-
-	if (!script) {
-		debug('html:post');
-
+	if (!source) {
 		await useDocumentReady(document);
 
-		const post: HTMLScriptElement = document.querySelector('script[data]:not([data=""])')!;
-
-		script = post;
+		debug('html:post');
+		useSelector();
 	}
 
-	if (!script) {
+	if (!source) {
 		debug('html:live');
 
 		const response = await fetch('');
-		const content = await response.text();
+		const html = await response.text();
+		const match = /<script[ \w"=/-]+ src="([\w:/.-]+)" data="([\w_-]+)">/.exec(html);
 
-		const div = document.createElement('div');
-		div.innerHTML = content;
+		if (match && match.length === 2) {
+			const [, script, data] = match;
 
-		const live: HTMLScriptElement = div.querySelector('script[data]:not([data=""])')!;
-
-		script = live;
+			source = {
+				script,
+				data,
+			};
+		}
 	}
 
-	if (!script) {
+	if (!source) {
 		throw new Error('DEFUSER_SHORTWAVE_TARGET_NOT_FOUND');
-	}
-
-	const binary = script.getAttribute('data');
-	const source = script.getAttribute('src');
-
-	if (!binary) {
-		throw new Error('DEFUSER_SHORTWAVE_TARGET_DATA_NOT_FOUND');
 	}
 
 	try {
 		debug('bin:cached');
 
-		return asKit.getDecoded(binary, cache.source);
+		return asKit.getDecoded(source.data, cache.source);
 	} catch (e) {
 		debug('bin:cached', e);
 	}
@@ -58,10 +71,10 @@ const extract = async (pre?: HTMLScriptElement) => {
 
 	debug('bin:live');
 
-	const response = await fetch(source);
+	const response = await fetch(source.script);
 	const content = await response.text();
 
-	return asKit.getDecoded(binary, content);
+	return asKit.getDecoded(source.data, content);
 };
 
 const restoreV1 = (entries: ReturnType<typeof asKit['getDecoded']>['details']) => {
@@ -90,12 +103,11 @@ const restoreV1 = (entries: ReturnType<typeof asKit['getDecoded']>['details']) =
 };
 
 export const shortwave = async () => {
-	const switchSentryFlag = useDisableMethod(window, '__SENTRY_BROWSER_BUNDLE__', () => {
-		switchSentryFlag();
-	});
+	// @ts-expect-error __SENTRY_BROWSER_BUNDLE__ is used in their source
+	useDisableMethod(window, '__SENTRY_BROWSER_BUNDLE__');
+	useDisableMethod(window, 'atob');
 
-	const pre: HTMLScriptElement = document.querySelector('script[data]:not([data=""])')!;
-	const payload = await extract(pre);
+	const payload = await extract();
 
 	debug('payload', payload);
 

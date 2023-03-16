@@ -3,32 +3,36 @@ import {useDebug, useDisableMethod, useDocumentReady} from '../utils.js';
 
 const debug = useDebug('[asdefuser:basera1n]');
 
-const extract = async (pre?: HTMLScriptElement) => {
+const extract = async () => {
+	let data: string | undefined;
+
+	const useSelector = () => {
+		const target: HTMLScriptElement = document.querySelector('script[data]:not([data=""])')!;
+
+		if (target) {
+			const dataProperty = target.getAttribute('data');
+
+			if (dataProperty) {
+				data = dataProperty;
+			}
+		}
+	};
+
 	debug('html:pre');
+	useSelector();
 
-	let script = pre;
-
-	if (!script) {
-		debug('html:post');
-
+	if (!data) {
 		await useDocumentReady(document);
 
-		const post: HTMLScriptElement = document.querySelector('script[data]:not([data=""])')!;
-
-		script = post;
+		debug('html:post');
+		useSelector();
 	}
 
-	if (!script) {
+	if (!data) {
 		throw new Error('DEFUSER_BASERA1N_TARGET_NOT_FOUND');
 	}
 
-	const binary = script.getAttribute('data');
-
-	if (!binary) {
-		throw new Error('DEFUSER_BASERA1N_TARGET_DATA_NOT_FOUND');
-	}
-
-	return asKit.decode(binary);
+	return asKit.decode(data);
 };
 
 const restore = (source: string) => {
@@ -95,12 +99,9 @@ const restore = (source: string) => {
 };
 
 export const basera1n = async () => {
-	const switchAtob = useDisableMethod(window, 'atob', () => {
-		switchAtob();
-	});
+	useDisableMethod(window, 'atob');
 
-	const pre: HTMLScriptElement = document.querySelector('script[data]:not([data=""])')!;
-	const payload = await extract(pre);
+	const payload = await extract();
 
 	debug('payload', payload);
 

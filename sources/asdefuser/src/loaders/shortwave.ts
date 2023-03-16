@@ -37,23 +37,6 @@ const extract = async () => {
 	}
 
 	if (!source) {
-		debug('html:live');
-
-		const response = await fetch('');
-		const html = await response.text();
-		const match = /<script[ \w"=/-]+ src="([\w:/.-]+)" data="([\w_-]+)">/.exec(html);
-
-		if (match && match.length === 2) {
-			const [, script, data] = match;
-
-			source = {
-				script,
-				data,
-			};
-		}
-	}
-
-	if (!source) {
 		throw new Error('DEFUSER_SHORTWAVE_TARGET_NOT_FOUND');
 	}
 
@@ -84,12 +67,9 @@ const restoreV1 = (entries: ReturnType<typeof asKit['getDecoded']>['details']) =
 
 	for (const entry of entries) {
 		try {
-			const node = document.querySelector(`#${entry.id}`);
+			const node = document.querySelector(`#${entry.id}`)!;
 
-			if (!node) {
-				continue;
-			}
-
+			// Let the error occur
 			node.before(entry.text);
 			node.remove();
 		} catch (error) {

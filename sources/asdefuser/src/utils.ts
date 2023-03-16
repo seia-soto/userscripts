@@ -6,6 +6,14 @@ export const useDebug = (namespace: string) => new Proxy(console.debug, {
 
 const debug = useDebug('[asdefuser:__utils__]');
 
+export const useIsSubframe = () => {
+	try {
+		return window.self !== window.top;
+	} catch (_error) {
+		return true;
+	}
+};
+
 export const useCaller = () => {
 	try {
 		throw new Error('feedback');
@@ -59,7 +67,7 @@ export const useAsSourceFeedback = (name: string, caller: string) => {
 };
 
 type ThisWindow = Window & typeof globalThis;
-type PermitableAsRoot = Record<PropertyKey, unknown> | ThisWindow | Document | Element;
+type PermitableAsRoot = Record<PropertyKey, unknown> | ThisWindow | Document | Element | Node | ObjectConstructor;
 
 export const createMethodHookEntries = (): Array<{root: PermitableAsRoot; name: PropertyKey}> => [];
 
@@ -68,7 +76,7 @@ const __useSwapMethodEntries = createMethodHookEntries();
 export const useSwapMethod = <Root extends PermitableAsRoot>(
 	root: Root,
 	name: keyof Root,
-	feedback: (name: string, caller: string) => false | Root[keyof Root],
+	feedback: (original: Root[keyof Root], root: Root, name: string, caller: string) => false | Root[keyof Root],
 ) => {
 	for (const entry of __useSwapMethodEntries) {
 		if (entry.root === root && entry.name === name) {
@@ -86,7 +94,7 @@ export const useSwapMethod = <Root extends PermitableAsRoot>(
 				return target;
 			}
 
-			const useSwap = feedback(name.toString(), useCaller());
+			const useSwap = feedback(target, root, name.toString(), useCaller());
 
 			if (!useSwap) {
 				return target;
@@ -95,7 +103,7 @@ export const useSwapMethod = <Root extends PermitableAsRoot>(
 			return useSwap;
 		},
 		set(v: Root[keyof Root]) {
-			if (typeof feedback === 'function' && feedback(name.toString(), useCaller())) {
+			if (typeof feedback === 'function' && feedback(target, root, name.toString(), useCaller())) {
 				target = v;
 			}
 		},
@@ -114,7 +122,7 @@ export const useDisableMethod = <Root extends PermitableAsRoot>(
 	name: keyof Root,
 	feedback: (name: string, caller: string) => boolean = useAsSourceFeedback,
 ) => {
-	useSwapMethod(root, name, (name, caller) => {
+	useSwapMethod(root, name, (_original, _root, name, caller) => {
 		let shouldDisable = true;
 
 		if (typeof feedback === 'function') {
@@ -122,7 +130,7 @@ export const useDisableMethod = <Root extends PermitableAsRoot>(
 		}
 
 		if (shouldDisable) {
-			throw new TypeError(`${name} is not a function`);
+			throw new TypeError(`${name} is not accessible`);
 		}
 
 		return false;

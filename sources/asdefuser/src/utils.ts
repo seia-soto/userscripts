@@ -58,7 +58,8 @@ export const useAsSourceFeedback = (name: string, caller: string) => {
 	return false;
 };
 
-type PermitableAsRoot = Record<PropertyKey, unknown> | (Window & typeof globalThis);
+type ThisWindow = Window & typeof globalThis;
+type PermitableAsRoot = Record<PropertyKey, unknown> | ThisWindow | Document | Element;
 
 export const createMethodHookEntries = (): Array<{root: PermitableAsRoot; name: PropertyKey}> => [];
 

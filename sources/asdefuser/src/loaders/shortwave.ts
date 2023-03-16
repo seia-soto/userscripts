@@ -103,8 +103,6 @@ const restoreV1 = (entries: ReturnType<typeof asKit['getDecoded']>['details']) =
 };
 
 export const shortwave = async () => {
-	// @ts-expect-error __SENTRY_BROWSER_BUNDLE__ is used in their source
-	useDisableMethod(window, '__SENTRY_BROWSER_BUNDLE__');
 	useDisableMethod(window, 'atob');
 
 	const payload = await extract();

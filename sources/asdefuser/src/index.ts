@@ -1,3 +1,4 @@
+import {useNetworkInterceptor} from './interceptors/network.js';
 import {basera1n} from './loaders/basera1n.js';
 import {shortwave} from './loaders/shortwave.js';
 import {useDisableMethod, useIsSubframe} from './utils.js';
@@ -7,6 +8,7 @@ const bootstrap = () => {
 		return;
 	}
 
+	useNetworkInterceptor();
 	useDisableMethod(Element.prototype, 'remove');
 	useDisableMethod(Element.prototype, 'removeChild');
 	useDisableMethod(Element.prototype, 'append');

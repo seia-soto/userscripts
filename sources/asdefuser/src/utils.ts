@@ -6,6 +6,8 @@ export const useDebug = (namespace: string) => new Proxy(console.debug, {
 
 const debug = useDebug('[asdefuser:__utils__]');
 
+export const secret = Math.random().toString(36).slice(2);
+
 export const useIsSubframe = () => {
 	try {
 		return window.self !== window.top;
@@ -69,15 +71,66 @@ export const useAsSourceFeedback = (name: string, caller: string) => {
 type ThisWindow = Window & typeof globalThis;
 type PermitableAsRoot = Record<PropertyKey, unknown> | ThisWindow | Document | Element | Node | ObjectConstructor;
 
-export const createMethodHookEntries = (): Array<{root: PermitableAsRoot; name: PropertyKey}> => [];
+const createMethodHookEntries = (): Array<{root: PermitableAsRoot; name: PropertyKey; descriptor?: PropertyDescriptor}> => [];
 
 const __useSwapMethodEntries = createMethodHookEntries();
+
+export const usePropertyDescriptor = () => {
+	const alt = (root: PermitableAsRoot, name: PropertyKey) => {
+		debug(`usePropertyDescriptor name=${name.toString()}`);
+
+		// @ts-expect-error Use secret to filter out
+		return Object.getOwnPropertyDescriptor(root, name, secret);
+	};
+
+	if (__useSwapMethodEntries.length) {
+		return alt;
+	}
+
+	const original = Object.getOwnPropertyDescriptor;
+
+	__useSwapMethodEntries.push({
+		root: Object,
+		name: 'getOwnPropertyDescriptor',
+		descriptor: original(Object, 'getOwnPropertyDescriptor'),
+	});
+
+	Object.defineProperties(Object, {
+		getOwnPropertyDescriptor: {
+			get() {
+				return new Proxy(original, {
+					apply(target, thisArg, argArray) {
+						const [o, p, access] = argArray as [PermitableAsRoot, PropertyKey, string];
+
+						if (access === secret) {
+							return Reflect.apply(target, thisArg, [o, p]);
+						}
+
+						for (const entry of __useSwapMethodEntries) {
+							if (entry.descriptor && entry.root === o && entry.name === p) {
+								debug(`usePropertyDescriptor name=${entry.name.toString()} mocked=true`);
+
+								return entry.descriptor ?? Reflect.apply(target, thisArg, [o, p]);
+							}
+						}
+
+						return Reflect.apply(target, thisArg, [o, p]);
+					},
+				});
+			},
+		},
+	});
+
+	return alt;
+};
 
 export const useSwapMethod = <Root extends PermitableAsRoot>(
 	root: Root,
 	name: keyof Root,
 	feedback: (original: Root[keyof Root], root: Root, name: string, caller: string) => false | Root[keyof Root],
 ) => {
+	const getOwnPropertyDescriptor = usePropertyDescriptor();
+
 	for (const entry of __useSwapMethodEntries) {
 		if (entry.root === root && entry.name === name) {
 			debug(`useSwapMethod name=${name.toString()} duplicated=true`);
@@ -112,6 +165,7 @@ export const useSwapMethod = <Root extends PermitableAsRoot>(
 	__useSwapMethodEntries.push({
 		root,
 		name,
+		descriptor: getOwnPropertyDescriptor(root, name),
 	});
 
 	debug(`useSwapMethod name=${name.toString()}`);

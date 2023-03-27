@@ -4,10 +4,6 @@ import {shortwave} from './loaders/shortwave.js';
 import {useDisableMethod, useIsSubframe} from './utils.js';
 
 const bootstrap = () => {
-	if (useIsSubframe()) {
-		return;
-	}
-
 	useNetworkInterceptor();
 	useDisableMethod(Element.prototype, 'remove');
 	useDisableMethod(Element.prototype, 'removeChild');
@@ -15,6 +11,11 @@ const bootstrap = () => {
 	useDisableMethod(Element.prototype, 'appendChild');
 	useDisableMethod(Element.prototype, 'insertBefore');
 	useDisableMethod(Element.prototype, 'attachShadow');
+	useDisableMethod(document, 'createElement');
+
+	if (useIsSubframe()) {
+		return;
+	}
 
 	void basera1n();
 	void shortwave();

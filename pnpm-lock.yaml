@@ -18,7 +18,7 @@ importers:
     specifiers:
       '@typescript-eslint/eslint-plugin': '>=5.43.0'
       '@typescript-eslint/parser': '>=5.43.0'
-      adshield-defuser: github:seia-soto/adshield-defuser#v0.0.8
+      adshield-defuser: github:seia-soto/adshield-defuser#v0.0.9
       buffer: ^6.0.3
       eslint: '>=8.0.0'
       eslint-config-xo: ^0.43.1
@@ -26,7 +26,7 @@ importers:
       ts-node: ^10.9.1
       typescript: '>=4.4'
     dependencies:
-      adshield-defuser: github.com/seia-soto/adshield-defuser/5f3f061e011a5414d111e618843eda389e274e2a
+      adshield-defuser: github.com/seia-soto/adshield-defuser/020b9e4bfebf8e3d492f73a0f048f135db5de9cb
       buffer: 6.0.3
     devDependencies:
       '@typescript-eslint/eslint-plugin': 5.54.1_4rfaf6mlw2mmutqjcopwvbftpu
@@ -1485,10 +1485,10 @@ packages:
     engines: {node: '>=10'}
     dev: true
 
-  github.com/seia-soto/adshield-defuser/5f3f061e011a5414d111e618843eda389e274e2a:
-    resolution: {commit: 5f3f061e011a5414d111e618843eda389e274e2a, repo: git+ssh://git@github.com/seia-soto/adshield-defuser.git, type: git}
+  github.com/seia-soto/adshield-defuser/020b9e4bfebf8e3d492f73a0f048f135db5de9cb:
+    resolution: {commit: 020b9e4bfebf8e3d492f73a0f048f135db5de9cb, repo: git+ssh://git@github.com/seia-soto/adshield-defuser.git, type: git}
     name: adshield-defuser
-    version: 0.0.8
+    version: 0.0.9
     dependencies:
       buffertly: 1.2.0
       protobufjs: 7.2.2

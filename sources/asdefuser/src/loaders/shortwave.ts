@@ -67,11 +67,27 @@ const restoreV1 = (entries: ReturnType<typeof asKit['getDecoded']>['details']) =
 
 	for (const entry of entries) {
 		try {
-			const node = document.querySelector(`#${entry.id}`)!;
+			switch (entry.type) {
+				case asKit.PayloadV1Types.Text: {
+					const node = document.querySelector(`#${entry.id}`)!;
 
-			// Let the error occur
-			node.before(entry.text);
-			node.remove();
+					// Let the error occur
+					node.before(entry.text);
+					node.remove();
+
+					break;
+				}
+
+				case asKit.PayloadV1Types.Head: {
+					document.head.insertAdjacentHTML('beforeend', entry.code);
+
+					break;
+				}
+
+				default: {
+					throw new Error('DEFUSER_SHORTWAVE_UNSUPPORTED_ENTRY_TYPE');
+				}
+			}
 		} catch (error) {
 			debug('restore:v1 error=', error);
 

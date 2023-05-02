@@ -29,7 +29,7 @@ const extract = async () => {
 	}
 
 	if (!data) {
-		throw new Error('DEFUSER_BASERA1N_TARGET_NOT_FOUND');
+		throw new Error('DEFUSER_BASESHOWER_TARGET_NOT_FOUND');
 	}
 
 	return asKit.decode(data);

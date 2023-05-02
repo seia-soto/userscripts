@@ -1,7 +1,6 @@
 # asdefuser — AdShield Defuser
 
-The development of asdefuser is not public.
-You can request the access to the private library named `adshield-defuser` by contacting [seia@outlook.kr](mailto:seia@outlook.kr).
+See `seia-soto/adshield-defuser` if you wonder what's in the box.
 
 ## Targets
 

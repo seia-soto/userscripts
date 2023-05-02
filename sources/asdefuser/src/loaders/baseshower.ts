@@ -42,8 +42,23 @@ const restore = (source: ReturnType<typeof asKit.decode>) => {
 
 	for (const entry of source) {
 		try {
-			if (entry.tags) {
+			if (asKit.isTag(entry)) {
 				document.head.insertAdjacentHTML('beforeend', entry.tags);
+
+				continue;
+			}
+
+			if (asKit.isText(entry)) {
+				const node = document.getElementById(entry.text_id);
+
+				if (!node) {
+					continue;
+				}
+
+				node.before(entry.text_value);
+				node.remove();
+
+				continue;
 			}
 		} catch (error) {
 			debug('restore:v1 error=', error);

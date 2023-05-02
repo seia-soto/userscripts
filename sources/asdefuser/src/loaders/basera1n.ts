@@ -80,7 +80,7 @@ const restore = (source: string) => {
 
 	for (const entry of data.hostages) {
 		try {
-			const node = document.querySelector(`#${entry.id}`);
+			const node = document.getElementById(entry.id);
 
 			if (!node) {
 				continue;

@@ -12,7 +12,7 @@
   "author": "HoJeong Go <seia@outlook.kr>",
   "license": "MIT",
   "dependencies": {
-    "adshield-defuser": "github:seia-soto/adshield-defuser#v0.0.10",
+    "adshield-defuser": "github:seia-soto/adshield-defuser#v0.0.12",
     "buffer": "^6.0.3"
   },
   "devDependencies": {

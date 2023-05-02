@@ -20,8 +20,8 @@ importers:
   sources/asdefuser:
     dependencies:
       adshield-defuser:
-        specifier: github:seia-soto/adshield-defuser#v0.0.10
-        version: github.com/seia-soto/adshield-defuser/77fe0c1778412179b183f4086e85c2245ff3d2fa
+        specifier: github:seia-soto/adshield-defuser#v0.0.12
+        version: github.com/seia-soto/adshield-defuser/6d5649f3d9ffbf0b2a7fe77c0e551fcfee3ae3cf
       buffer:
         specifier: ^6.0.3
         version: 6.0.3
@@ -1497,10 +1497,10 @@ packages:
     engines: {node: '>=10'}
     dev: true
 
-  github.com/seia-soto/adshield-defuser/77fe0c1778412179b183f4086e85c2245ff3d2fa:
-    resolution: {commit: 77fe0c1778412179b183f4086e85c2245ff3d2fa, repo: git+ssh://git@github.com/seia-soto/adshield-defuser.git, type: git}
+  github.com/seia-soto/adshield-defuser/6d5649f3d9ffbf0b2a7fe77c0e551fcfee3ae3cf:
+    resolution: {commit: 6d5649f3d9ffbf0b2a7fe77c0e551fcfee3ae3cf, repo: git+ssh://git@github.com/seia-soto/adshield-defuser.git, type: git}
     name: adshield-defuser
-    version: 0.0.10
+    version: 0.0.12
     dependencies:
       buffertly: 1.2.0
       protobufjs: 7.2.3

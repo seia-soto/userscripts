@@ -1,6 +1,7 @@
 import * as asKit from 'adshield-defuser/out/loaders/shortwave.js';
-import {useDebug, useDisableMethod, useDocumentReady} from '../utils.js';
+import {ProtobufWireTypes} from 'adshield-defuser/out/utils/protobuf.js';
 import * as cache from '../__generated__/shortwave.cache.js';
+import {useDebug, useDisableMethod, useDocumentReady} from '../utils.js';
 
 const debug = useDebug('[asdefuser:shortwave]');
 
@@ -42,10 +43,10 @@ const extract = async () => {
 
 	debug('bin:cached');
 
-	return asKit.getDecoded(source.data, cache.source);
+	return asKit.decode(source.data, cache.source);
 };
 
-const restoreV1 = (entries: ReturnType<typeof asKit['getDecoded']>['details']) => {
+const restoreV1 = (entries: ReturnType<typeof asKit['decode']>['details']) => {
 	debug('restore:v1');
 
 	let failed = 0;
@@ -90,7 +91,7 @@ export const shortwave = async () => {
 
 	debug('payload', payload);
 
-	if (payload.meta.version?.wireType !== asKit.ProtobufWireTypes.Uint32) {
+	if (payload.meta.version?.wireType !== ProtobufWireTypes.Uint32) {
 		throw new Error('DEFUSER_SHORTWAVE_UNSUPPORTED_PAYLOAD_VERSION');
 	}
 

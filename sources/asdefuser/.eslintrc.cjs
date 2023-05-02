@@ -23,4 +23,8 @@ module.exports = {
 	},
 	rules: {
 	},
+	ignorePatterns: [
+		'loader.min.js',
+		'script.min.js',
+	],
 };

@@ -36,7 +36,7 @@ const extract = async () => {
 };
 
 const restore = (source: string) => {
-	debug('restore');
+	debug('restore', source);
 
 	const data = JSON.parse(source) as {
 		api: {

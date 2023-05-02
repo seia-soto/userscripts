@@ -22,6 +22,10 @@
 // @match https://hancinema.net/*
 // @match http://*.hancinema.net/*
 // @match https://*.hancinema.net/*
+// @match http://edaily.co.kr/*
+// @match https://edaily.co.kr/*
+// @match http://*.edaily.co.kr/*
+// @match https://*.edaily.co.kr/*
 //
 // @namespace https://github.com/seia-soto/userscripts
 // @homepageURL https://github.com/seia-soto/userscripts

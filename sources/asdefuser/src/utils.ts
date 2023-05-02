@@ -59,7 +59,11 @@ export const useCaller = () => {
 };
 
 export const useAsSourceFeedback = (name: string, caller: string) => {
-	if (!caller.includes(location.host) && caller.includes('script.min.js')) {
+	if (caller.includes(location.host)) {
+		return false;
+	}
+
+	if (caller.includes('script.min.js') || caller.includes('loader.min.js')) {
 		debug(`useAsSourceFeedback name=${name} caller=${caller}`);
 
 		return true;

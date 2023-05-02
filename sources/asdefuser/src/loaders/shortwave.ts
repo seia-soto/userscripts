@@ -40,24 +40,9 @@ const extract = async () => {
 		throw new Error('DEFUSER_SHORTWAVE_TARGET_NOT_FOUND');
 	}
 
-	try {
-		debug('bin:cached');
+	debug('bin:cached');
 
-		return asKit.getDecoded(source.data, cache.source);
-	} catch (e) {
-		debug('bin:cached', e);
-	}
-
-	if (!source) {
-		throw new Error('DEFUSER_SHORTWAVE_TARGET_SOURCE_NOT_FOUND');
-	}
-
-	debug('bin:live');
-
-	const response = await fetch(source.script);
-	const content = await response.text();
-
-	return asKit.getDecoded(source.data, content);
+	return asKit.getDecoded(source.data, cache.source);
 };
 
 const restoreV1 = (entries: ReturnType<typeof asKit['getDecoded']>['details']) => {

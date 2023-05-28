@@ -1,7 +1,7 @@
 import {useNetworkInterceptor} from './interceptors/network.js';
-import {basera1n} from './loaders/basera1n.js';
 import {baseshower} from './loaders/baseshower.js';
 import {shortwave} from './loaders/shortwave.js';
+import {tinywave} from './loaders/ztinywave.js';
 import {useDisableMethod, useIsSubframe} from './utils.js';
 
 const bootstrap = () => {
@@ -18,9 +18,9 @@ const bootstrap = () => {
 		return;
 	}
 
-	void shortwave();
 	void baseshower();
-	void basera1n();
+	void shortwave();
+	void tinywave();
 };
 
 bootstrap();

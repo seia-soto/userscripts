@@ -1,14 +1,12 @@
-export const useDebug = (namespace: string) => new Proxy(console.debug, {
+export const createDebug = (namespace: string) => new Proxy(console.debug, {
 	apply(target, thisArg, argArray) {
 		Reflect.apply(target, thisArg, [`${namespace} (${location.href})`, ...argArray as unknown[]]);
 	},
 });
 
-const debug = useDebug('[asdefuser:__utils__]');
+const debug = createDebug('[asdefuser:__utils__]');
 
-export const secret = Math.random().toString(36).slice(2);
-
-export const useIsSubframe = () => {
+export const isSubFrame = () => {
 	try {
 		return window.self !== window.top;
 	} catch (_error) {
@@ -16,12 +14,12 @@ export const useIsSubframe = () => {
 	}
 };
 
-export const useCaller = () => {
+export const getCaller = () => {
 	try {
 		throw new Error('feedback');
 	} catch (error: unknown) {
 		if (!(error instanceof Error) || !error.stack) {
-			throw new Error('Failed to validate feedback function or stack trace is not available!');
+			return {} as const;
 		}
 
 		let self = '';
@@ -51,20 +49,30 @@ export const useCaller = () => {
 				continue;
 			}
 
-			return source;
+			return {
+				source,
+				line,
+				stack: error.stack,
+			} as const;
 		}
 
-		return error.stack;
+		return {
+			stack: error.stack,
+		} as const;
 	}
 };
 
-export const useAsSourceFeedback = (name: string, caller: string) => {
-	if (caller.includes(location.host)) {
+const knownDomainNames = new Set<string>();
+
+export const isAsSource = (name: string, caller: ReturnType<typeof getCaller>) => {
+	if (caller.source?.includes(location.host)) {
 		return false;
 	}
 
-	if (caller.includes('script.min.js') || caller.includes('loader.min.js')) {
-		debug(`useAsSourceFeedback name=${name} caller=${caller}`);
+	if (caller.source?.includes('script.min.js') ?? caller.source?.includes('loader.min.js')) {
+		debug(`isAsSource name=${name} caller=${caller.source}`);
+
+		knownDomainNames.add(caller.source.split('/')[0]);
 
 		return true;
 	}
@@ -75,74 +83,11 @@ export const useAsSourceFeedback = (name: string, caller: string) => {
 type ThisWindow = Window & typeof globalThis;
 type PermitableAsRoot = Record<PropertyKey, unknown> | ThisWindow | Document | Element | Node | ObjectConstructor;
 
-const createMethodHookEntries = (): Array<{root: PermitableAsRoot; name: PropertyKey; descriptor?: PropertyDescriptor}> => [];
-
-const __useSwapMethodEntries = createMethodHookEntries();
-
-export const usePropertyDescriptor = () => {
-	const alt = (root: PermitableAsRoot, name: PropertyKey) => {
-		debug(`usePropertyDescriptor name=${name.toString()}`);
-
-		// @ts-expect-error Use secret to filter out
-		return Object.getOwnPropertyDescriptor(root, name, secret);
-	};
-
-	if (__useSwapMethodEntries.length) {
-		return alt;
-	}
-
-	const original = Object.getOwnPropertyDescriptor;
-
-	__useSwapMethodEntries.push({
-		root: Object,
-		name: 'getOwnPropertyDescriptor',
-		descriptor: original(Object, 'getOwnPropertyDescriptor'),
-	});
-
-	Object.defineProperties(Object, {
-		getOwnPropertyDescriptor: {
-			get() {
-				return new Proxy(original, {
-					apply(target, thisArg, argArray) {
-						const [o, p, access] = argArray as [PermitableAsRoot, PropertyKey, string];
-
-						if (access === secret) {
-							return Reflect.apply(target, thisArg, [o, p]);
-						}
-
-						for (const entry of __useSwapMethodEntries) {
-							if (entry.descriptor && entry.root === o && entry.name === p) {
-								debug(`usePropertyDescriptor name=${entry.name.toString()} mocked=true`);
-
-								return entry.descriptor ?? Reflect.apply(target, thisArg, [o, p]);
-							}
-						}
-
-						return Reflect.apply(target, thisArg, [o, p]);
-					},
-				});
-			},
-		},
-	});
-
-	return alt;
-};
-
-export const useSwapMethod = <Root extends PermitableAsRoot>(
+export const swapMethod = <Root extends PermitableAsRoot, Key extends keyof Root>(
 	root: Root,
-	name: keyof Root,
-	feedback: (original: Root[keyof Root], root: Root, name: string, caller: string) => false | Root[keyof Root],
+	name: Key,
+	feedback: (original: Root[Key], root: Root, name: string, caller: ReturnType<typeof getCaller>) => unknown,
 ) => {
-	const getOwnPropertyDescriptor = usePropertyDescriptor();
-
-	for (const entry of __useSwapMethodEntries) {
-		if (entry.root === root && entry.name === name) {
-			debug(`useSwapMethod name=${name.toString()} duplicated=true`);
-
-			return;
-		}
-	}
-
 	let target = root[name];
 
 	Object.defineProperty(root, name, {
@@ -151,51 +96,50 @@ export const useSwapMethod = <Root extends PermitableAsRoot>(
 				return target;
 			}
 
-			const useSwap = feedback(target, root, name.toString(), useCaller());
+			const swapWith = feedback(target, root, name.toString(), getCaller());
 
-			if (!useSwap) {
+			if (swapWith === false) {
 				return target;
 			}
 
-			return useSwap;
+			debug(`swapMethod name=${name.toString()}`);
+
+			return swapWith;
 		},
-		set(v: Root[keyof Root]) {
-			if (typeof feedback === 'function' && feedback(target, root, name.toString(), useCaller())) {
+		set(v: Root[Key]) {
+			if (typeof feedback === 'function' && feedback(target, root, name.toString(), getCaller())) {
 				target = v;
 			}
 		},
 	});
 
-	__useSwapMethodEntries.push({
-		root,
-		name,
-		descriptor: getOwnPropertyDescriptor(root, name),
-	});
-
-	debug(`useSwapMethod name=${name.toString()}`);
+	debug(`swapMethod name=${name.toString()}`);
 };
 
-export const useDisableMethod = <Root extends PermitableAsRoot>(
+export const disableMethod = <Root extends PermitableAsRoot>(
 	root: Root,
 	name: keyof Root,
-	feedback: (name: string, caller: string) => boolean = useAsSourceFeedback,
+	feedback: (name: string, caller: ReturnType<typeof getCaller>) => boolean = isAsSource,
 ) => {
-	useSwapMethod(root, name, (_original, _root, name, caller) => {
+	swapMethod(root, name, (_original, _root, name, caller) => {
 		let shouldDisable = true;
 
 		if (typeof feedback === 'function') {
 			shouldDisable = feedback(name, caller);
 		}
 
-		if (shouldDisable) {
-			throw new TypeError(`${name} is not accessible`);
-		}
-
-		return false;
+		return shouldDisable;
 	});
 };
 
-export const useDocumentReady = async (document: Document) => {
+export const disableMethodGlobally = <Root extends PermitableAsRoot>(
+	root: Root,
+	name: keyof Root,
+) => {
+	swapMethod(root, name, () => true);
+};
+
+export const documentReady = async (document: Document) => {
 	if (document.readyState !== 'loading') {
 		return true;
 	}

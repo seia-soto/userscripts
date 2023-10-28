@@ -1,9 +1,9 @@
 import * as cache from '../__generated__/ztinywave.cache.js';
-import {useDebug, useDisableMethod, useDocumentReady} from '../utils.js';
+import {createDebug, disableMethod, documentReady} from '../utils.js';
 
 type Data = Array<{tags: string}>;
 
-const debug = useDebug('[asdefuser:tinywave]');
+const debug = createDebug('[asdefuser:tinywave]');
 
 const decode = (payload: string) => {
 	const id = payload.slice(0, 4);
@@ -119,7 +119,7 @@ const extract = async () => {
 	useSelector();
 
 	if (!source) {
-		await useDocumentReady(document);
+		await documentReady(document);
 
 		debug('html:post');
 		useSelector();
@@ -135,7 +135,7 @@ const extract = async () => {
 };
 
 export const tinywave = async () => {
-	useDisableMethod(window, 'atob');
+	disableMethod(window, 'atob');
 
 	const payload = await extract();
 

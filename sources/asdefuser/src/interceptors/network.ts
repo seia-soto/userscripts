@@ -1,11 +1,11 @@
-import {useAsSourceFeedback, useDebug, useDisableMethod, useSwapMethod} from '../utils';
+import {isAsSource, createDebug, disableMethod, swapMethod} from '../utils';
 
-const debug = useDebug('[asdefuser:networkInterceptor]');
+const debug = createDebug('[asdefuser:networkInterceptor]');
 
-export const useNetworkInterceptor = () => {
-	useDisableMethod(window, 'fetch');
-	useSwapMethod(window, 'XMLHttpRequest', (Original: new () => XMLHttpRequest, _root, name, caller) => {
-		if (!useAsSourceFeedback(name, caller)) {
+export const interceptNetwork = () => {
+	disableMethod(window, 'fetch');
+	swapMethod(window, 'XMLHttpRequest', (Original: new () => XMLHttpRequest, _root, name, caller) => {
+		if (!isAsSource(name, caller)) {
 			return false;
 		}
 

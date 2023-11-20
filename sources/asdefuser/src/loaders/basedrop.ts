@@ -7,7 +7,7 @@ export const basedrop = async () => {
 
 	let appendant = '';
 
-	for (const node of document.querySelectorAll('script[wp-data][src]')) {
+	for (const node of document.querySelectorAll('script[wp-data]')) {
 		const attribute = node.getAttribute('wp-data');
 
 		if (!attribute) {

@@ -14,56 +14,44 @@ export const isSubFrame = () => {
 	}
 };
 
+export const getSourceFromStackTraceLine = (line: string) => {
+	const protocolEndAt = line.indexOf('//');
+
+	if (protocolEndAt < 0) {
+		return '';
+	}
+
+	const endAt = line.indexOf(':', protocolEndAt);
+
+	if (endAt < 0) {
+		return '';
+	}
+
+	const source = line.slice(protocolEndAt + 2, endAt);
+
+	return source;
+};
+
 export const getCaller = () => {
 	try {
 		throw new Error('feedback');
 	} catch (error: unknown) {
 		if (!(error instanceof Error) || !error.stack) {
-			return {} as const;
+			throw new Error('Invalid Error instance found');
 		}
 
-		let self = '';
-
-		for (const line of error.stack.split('\n').slice(1)) {
-			const protocolEndAt = line.indexOf('//');
-
-			if (protocolEndAt < 0) {
-				continue;
-			}
-
-			const endAt = line.indexOf(':', protocolEndAt);
-
-			if (endAt < 0) {
-				continue;
-			}
-
-			const source = line.slice(protocolEndAt + 2, endAt);
-
-			if (!self) {
-				self = source;
-
-				continue;
-			}
-
-			if (source === self) {
-				continue;
-			}
-
-			return {
-				source,
-				line,
-				stack: error.stack,
-			} as const;
-		}
+		const lastBreak = error.stack.lastIndexOf('\n');
+		const source = getSourceFromStackTraceLine(error.stack.slice(lastBreak));
 
 		return {
+			source,
 			stack: error.stack,
 		} as const;
 	}
 };
 
 export const isAsSource = (name: string, caller: ReturnType<typeof getCaller>) => {
-	if (!caller.source) {
+	if (!caller) {
 		return false;
 	}
 
@@ -93,18 +81,19 @@ export const swapMethod = <Root, Key extends keyof Root>(
 				return target;
 			}
 
-			const swapWith = feedback(target, root, name.toString(), getCaller());
+			const caller = getCaller();
+			const swapWith = feedback(target, root, name.toString(), caller);
 
 			if (swapWith === false) {
 				return target;
 			}
 
-			debug(`swapMethod name=${name.toString()}`);
+			debug(`swapMethod name=${name.toString()} caller=${caller.source}`);
 
 			return swapWith;
 		},
 		set(v: Root[Key]) {
-			if (typeof feedback === 'function' && feedback(target, root, name.toString(), getCaller())) {
+			if (typeof feedback === 'function' && feedback(target, root, name.toString(), getCaller()) === false) {
 				target = v;
 			}
 		},

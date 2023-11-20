@@ -16,6 +16,8 @@ const bootstrap = () => {
 	disableMethod(document, 'createElement');
 	disableMethod(window, 'postMessage');
 	disableMethod(window, 'Event');
+	disableMethod(Object, 'defineProperty');
+	disableMethod(Object, 'defineProperties');
 
 	if (isSubFrame()) {
 		return;

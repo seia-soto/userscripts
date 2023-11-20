@@ -62,17 +62,17 @@ export const getCaller = () => {
 	}
 };
 
-const knownDomainNames = new Set<string>();
-
 export const isAsSource = (name: string, caller: ReturnType<typeof getCaller>) => {
-	if (caller.source?.includes(location.host)) {
+	if (!caller.source) {
 		return false;
 	}
 
-	if (caller.source?.includes('script.min.js') ?? caller.source?.includes('loader.min.js')) {
-		debug(`isAsSource name=${name} caller=${caller.source}`);
+	if (caller.source.includes(location.host)) {
+		return false;
+	}
 
-		knownDomainNames.add(caller.source.split('/')[0]);
+	if (caller.source.includes('script.min.js') || caller.source.includes('loader.min.js')) {
+		debug(`isAsSource name=${name} caller=${caller.source}`);
 
 		return true;
 	}
@@ -80,10 +80,7 @@ export const isAsSource = (name: string, caller: ReturnType<typeof getCaller>) =
 	return false;
 };
 
-type ThisWindow = Window & typeof globalThis;
-type PermitableAsRoot = Record<PropertyKey, unknown> | ThisWindow | Document | Element | Node | ObjectConstructor;
-
-export const swapMethod = <Root extends PermitableAsRoot, Key extends keyof Root>(
+export const swapMethod = <Root, Key extends keyof Root>(
 	root: Root,
 	name: Key,
 	feedback: (original: Root[Key], root: Root, name: string, caller: ReturnType<typeof getCaller>) => unknown,
@@ -116,7 +113,7 @@ export const swapMethod = <Root extends PermitableAsRoot, Key extends keyof Root
 	debug(`swapMethod name=${name.toString()}`);
 };
 
-export const disableMethod = <Root extends PermitableAsRoot>(
+export const disableMethod = <Root>(
 	root: Root,
 	name: keyof Root,
 	feedback: (name: string, caller: ReturnType<typeof getCaller>) => boolean = isAsSource,
@@ -132,7 +129,7 @@ export const disableMethod = <Root extends PermitableAsRoot>(
 	});
 };
 
-export const disableMethodGlobally = <Root extends PermitableAsRoot>(
+export const disableMethodGlobally = <Root>(
 	root: Root,
 	name: keyof Root,
 ) => {

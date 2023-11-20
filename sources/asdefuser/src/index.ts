@@ -13,7 +13,6 @@ const bootstrap = () => {
 	disableMethod(Element.prototype, 'appendChild');
 	disableMethod(Element.prototype, 'insertBefore');
 	disableMethod(Element.prototype, 'attachShadow');
-	disableMethod(Function.prototype, 'call');
 	disableMethod(document, 'createElement');
 	disableMethod(window, 'postMessage');
 	disableMethod(window, 'Event');

@@ -3,7 +3,7 @@
 // @name AdShield Defuser
 // @description Provides mitigation for AdShield trackers and advertisement services.
 // @author HoJeong Go <seia@outlook.kr>
-// @version 0.11.3
+// @version 0.12.0
 //
 // @grant none
 // @run-at document-start
@@ -36,6 +36,8 @@
 // @match https://*.enetnews.co.kr/*
 // @match http://genshinlab.com/*
 // @match https://genshinlab.com/*
+// @match http://loawa.com/
+// @match https://loawa.com/
 //
 // @namespace https://github.com/seia-soto/userscripts
 // @homepageURL https://github.com/seia-soto/userscripts

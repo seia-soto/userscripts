@@ -1,6 +1,7 @@
 import {interceptNetwork} from './interceptors/network.js';
 import {interceptStorage} from './interceptors/storage.js';
 import {basedrop} from './loaders/basedrop.js';
+import {tinywave} from './loaders/ztinywave.js';
 import {isAsSource, isSubFrame, makeProxy} from './utils.js';
 
 const bootstrap = () => {
@@ -21,6 +22,7 @@ const bootstrap = () => {
 	}
 
 	void basedrop();
+	void tinywave();
 };
 
 bootstrap();

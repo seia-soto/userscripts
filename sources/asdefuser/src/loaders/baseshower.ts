@@ -1,5 +1,5 @@
 import * as asKit from 'adshield-defuser/out/loaders/baseshower.js';
-import {createDebug, disableMethod, documentReady} from '../utils.js';
+import {createDebug, documentReady} from '../utils.js';
 
 const debug = createDebug('[asdefuser:baseshower]');
 
@@ -71,8 +71,6 @@ const restore = (source: ReturnType<typeof asKit.decode>) => {
 };
 
 export const baseshower = async () => {
-	disableMethod(window, 'atob');
-
 	const payload = await extract();
 
 	debug('payload', payload);

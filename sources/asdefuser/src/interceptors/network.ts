@@ -1,28 +1,17 @@
-import {isAsSource, createDebug, disableMethod, swapMethod} from '../utils';
-
-const debug = createDebug('[asdefuser:networkInterceptor]');
+import {getCaller, isAsSource, makeProxy} from '../utils';
 
 export const interceptNetwork = () => {
-	disableMethod(window, 'fetch');
-	swapMethod(window, 'XMLHttpRequest', (Original: new () => XMLHttpRequest, _root, name, caller) => {
-		if (!isAsSource(name, caller)) {
-			return false;
-		}
+	window.fetch = makeProxy(window.fetch, isAsSource);
 
-		return new Proxy(Original, {
-			construct(target, argArray, newTarget) {
-				const xhr = Reflect.construct(target, argArray, newTarget) as XMLHttpRequest;
+	window.XMLHttpRequest = new Proxy(window.XMLHttpRequest, {
+		construct(target, argArray, newTarget) {
+			const alt = isAsSource(getCaller());
 
-				xhr.open = (method: string, url: string) => {
-					debug(`XMLHttpRequest:open:null ${method} ${url}`);
-				};
+			if (typeof alt === 'undefined') {
+				return Reflect.construct(target, argArray, newTarget) as XMLHttpRequest;
+			}
 
-				xhr.send = () => {
-					debug('XMLHttpRequest:send:null');
-				};
-
-				return xhr;
-			},
-		});
+			return alt as XMLHttpRequest;
+		},
 	});
 };

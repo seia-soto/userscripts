@@ -1,5 +1,5 @@
 import * as cache from '../__generated__/ztinywave.cache.js';
-import {createDebug, disableMethod, documentReady} from '../utils.js';
+import {createDebug, documentReady} from '../utils.js';
 
 type Data = Array<{tags: string}>;
 
@@ -135,8 +135,6 @@ const extract = async () => {
 };
 
 export const tinywave = async () => {
-	disableMethod(window, 'atob');
-
 	const payload = await extract();
 
 	debug('payload', payload);

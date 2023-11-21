@@ -1,5 +1,5 @@
 import * as asKit from 'adshield-defuser/out/loaders/basera1n.js';
-import {createDebug, disableMethod, documentReady} from '../utils.js';
+import {createDebug, documentReady} from '../utils.js';
 
 const debug = createDebug('[asdefuser:basera1n]');
 
@@ -99,8 +99,6 @@ const restore = (source: string) => {
 };
 
 export const basera1n = async () => {
-	disableMethod(window, 'atob');
-
 	const payload = await extract();
 
 	debug('payload', payload);

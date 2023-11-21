@@ -1,7 +1,7 @@
 import * as asKit from 'adshield-defuser/out/loaders/shortwave.js';
 import {ProtobufWireTypes} from 'adshield-defuser/out/utils/protobuf.js';
 import * as cache from '../__generated__/shortwave.cache.js';
-import {createDebug, disableMethod, documentReady} from '../utils.js';
+import {createDebug, documentReady} from '../utils.js';
 
 const debug = createDebug('[asdefuser:shortwave]');
 
@@ -85,8 +85,6 @@ const restoreV1 = (entries: ReturnType<typeof asKit['decode']>['details']) => {
 };
 
 export const shortwave = async () => {
-	disableMethod(window, 'atob');
-
 	const payload = await extract();
 
 	debug('payload', payload);

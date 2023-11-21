@@ -1,4 +1,4 @@
-import {createDebug, disableMethod, isAsSource} from '../utils';
+import {createDebug} from '../utils';
 
 const debug = createDebug('[asdefuser:storageInterceptor]');
 
@@ -19,6 +19,4 @@ export const interceptStorage = () => {
 			return Reflect.apply(target, thisArg, argArray) as unknown;
 		},
 	});
-
-	disableMethod(Storage.prototype, 'setItem');
 };

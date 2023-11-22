@@ -14,8 +14,6 @@ export const isSubFrame = () => {
 	}
 };
 
-const isSafari = navigator.userAgent.includes('Safari') && navigator.userAgent.includes(') Version/');
-
 export const getStackTrace = () => {
 	const e = new Error();
 
@@ -23,9 +21,7 @@ export const getStackTrace = () => {
 		throw new Error('Stack trace is not available!');
 	}
 
-	const href = location.origin + location.pathname;
-
-	if (isSafari) {
+	if (e.stack.includes('@')) {
 		const trace = e.stack.split('\n');
 		const stack: string[] = [];
 
@@ -34,7 +30,7 @@ export const getStackTrace = () => {
 			const lastColon = line.lastIndexOf(':');
 			const dump = lastColon < 0 ? line.slice(start) : line.slice(start, line.lastIndexOf(':', lastColon - 1));
 
-			if (dump.startsWith('[')) {
+			if (dump.startsWith('[') || dump.startsWith('moz')) {
 				continue;
 			}
 
@@ -44,7 +40,6 @@ export const getStackTrace = () => {
 		return stack;
 	}
 
-	// Not Apple
 	const trace = e.stack.slice(6).split('\n');
 	const stack: string[] = [];
 
@@ -54,10 +49,7 @@ export const getStackTrace = () => {
 			line.lastIndexOf(':', line.lastIndexOf(':') - 1),
 		);
 
-		if (
-			dump.startsWith('<')
-			|| href === dump
-		) {
+		if (dump.startsWith('<')) {
 			continue;
 		}
 

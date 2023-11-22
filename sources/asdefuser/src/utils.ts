@@ -14,77 +14,115 @@ export const isSubFrame = () => {
 	}
 };
 
-export const getSourceFromStackTraceLine = (line: string) => {
-	const protocolEndAt = line.indexOf('//');
+const isSafari = navigator.userAgent.includes('Safari') && navigator.userAgent.includes(') Version/');
 
-	if (protocolEndAt < 0) {
-		return '';
+export const getStackTrace = () => {
+	const e = new Error();
+
+	if (!e.stack) {
+		throw new Error('Stack trace is not available!');
 	}
 
-	const endAt = line.indexOf(':', protocolEndAt);
+	const href = location.origin + location.pathname;
 
-	if (endAt < 0) {
-		return '';
-	}
+	if (isSafari) {
+		const trace = e.stack.split('\n').slice(-10);
+		const stack: string[] = [];
 
-	const source = line.slice(protocolEndAt + 2, endAt);
+		for (const line of trace) {
+			const start = line.indexOf('@') + 1;
+			const lastColon = line.lastIndexOf(':');
+			const dump = lastColon < 0 ? line.slice(start) : line.slice(start, line.lastIndexOf(':', lastColon - 1));
 
-	return source;
-};
+			if (
+				dump.startsWith('[')
+				|| href === dump
+			) {
+				continue;
+			}
 
-export const getCaller = () => {
-	try {
-		throw new Error('feedback');
-	} catch (error: unknown) {
-		if (!(error instanceof Error) || !error.stack) {
-			return {
-				source: '',
-				stack: '',
-			};
+			stack.push(dump);
 		}
 
-		const lastBreak = error.stack.lastIndexOf('\n');
-		const source = getSourceFromStackTraceLine(error.stack.slice(lastBreak));
-
-		return {
-			source,
-			stack: error.stack,
-		} as const;
+		return stack;
 	}
+
+	// Not Apple
+	const trace = e.stack.slice(6).split('\n').slice(-10);
+	const stack: string[] = [];
+
+	for (const line of trace) {
+		const dump = line.slice(
+			(line.indexOf('(') + 1) || line.indexOf('at') + 3,
+			line.lastIndexOf(':', line.lastIndexOf(':') - 1),
+		);
+
+		if (
+			dump.startsWith('<')
+			|| href === dump
+		) {
+			continue;
+		}
+
+		stack.push(dump);
+	}
+
+	return stack;
 };
 
-export type FeedbackFunction = (caller: ReturnType<typeof getCaller>) => unknown;
+export type FeedbackFunction = () => unknown;
 
-export const isAsSource: FeedbackFunction = caller => {
-	if (caller.source.length + caller.stack.length === 0) {
-		debug('isAsSource caller information is not available');
+const isAsCall = (line: string) => line.includes('/script.min.js') || line.includes('loader.min.js');
+
+export const isAsSource: FeedbackFunction = () => {
+	const stack = getStackTrace();
+
+	if (!stack.length) {
+		return;
+	}
+
+	if (
+		stack[0].startsWith('https://local.adguard.com/')
+		|| stack[0].startsWith('webkit')
+		|| stack[0].startsWith('chrome')
+	) {
+		debug('isAsSource trusted stack=internal');
 
 		return;
 	}
 
-	if (caller.source.includes(location.host)) {
+	const report = stack.map(line => isAsCall(line));
+	const rating = report.reduce((state, item) => state + Number(item), 0);
+
+	if (!rating) {
+		debug('isAsSource trusted stack=clean');
+
 		return;
 	}
 
-	if (caller.source.includes('script.min.js') || caller.source.includes('loader.min.js')) {
-		debug(`isAsSource caller=${caller.source}`);
+	if (
+		report[report.length - 1]
+		&& rating - 1 < 0
+	) {
+		debug('isAsSource trusted stack=modified');
 
-		return true;
+		return;
 	}
+
+	return true;
 };
 
 // eslint-disable-next-line @typescript-eslint/ban-types
-export const makeProxy = <F extends Function>(f: F, feedback: (caller: ReturnType<typeof getCaller>) => unknown) => {
+export const makeProxy = <F extends Function>(f: F, feedback: FeedbackFunction) => {
 	const proxy = new Proxy(f, {
 		apply(target, thisArg, argArray) {
-			const caller = getCaller();
-			const alt = feedback(caller);
+			const alt = feedback();
 
 			if (typeof alt === 'undefined') {
 				return Reflect.apply(target, thisArg, argArray) as F;
 			}
 
-			debug(`makeProxy name=${f?.name ?? '(anon)'} caller=${caller.source}`);
+			debug(`makeProxy name=${f?.name} args=`, argArray);
 
 			return alt;
 		},

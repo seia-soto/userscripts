@@ -134,7 +134,17 @@ const extract = async () => {
 	return decode(source.data);
 };
 
+export const style = () => {
+	const sheet = document.createElement('style');
+
+	sheet.textContent = '[style]>iframe[src="about:blank"],[style="display:none"]+[style] {display:none !important}';
+
+	document.head.appendChild(sheet);
+};
+
 export const tinywave = async () => {
+	style();
+
 	const payload = await extract();
 
 	debug('payload', payload);

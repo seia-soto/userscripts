@@ -1,7 +1,7 @@
 // ==UserScript==
 // @encoding utf-8
 // @name AdShield Defuser
-// @description Provides mitigation for AdShield trackers and advertisement services.
+// @description AdShield Defuser provides mitigation for AdShield trackers and advertisement services.
 // @author HoJeong Go <seia@outlook.kr>
 // @version 0.13.2
 //

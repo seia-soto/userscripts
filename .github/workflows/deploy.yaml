@@ -26,7 +26,7 @@ jobs:
       - name: Build
         run: |
           pnpm install
-          pnpm -r build
+          pnpm -r build --minify
           find ./ -name "*.user.js" -type f -exec cp {} ./pages \;
       - name: Tree
         if: always()

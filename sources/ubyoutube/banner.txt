@@ -1,0 +1,23 @@
+// ==UserScript==
+// @encoding utf-8
+// @name Universal YouTube
+// @description Block YouTube Ads on Safari.
+// @author HoJeong Go <seia@outlook.kr>
+// @version 0.1.0
+//
+// @grant none
+// @run-at document-start
+//
+// @match http://youtube.com/*
+// @match https://youtube.com/*
+// @match http://www.youtube.com/*
+// @match https://www.youtube.com/*
+// @match http://m.youtube.com/*
+// @match https://m.youtube.com/*
+//
+// @namespace https://github.com/seia-soto/userscripts
+// @homepageURL https://github.com/seia-soto/userscripts
+// @supportURL https://github.com/seia-soto/userscripts
+// @updateURL https://seia-soto.github.io/userscripts/ubyoutube.user.js
+// @downloadURL https://seia-soto.github.io/userscripts/ubyoutube.user.js
+// ==/UserScript==

@@ -1,13 +1,13 @@
 {
   "name": "asdefuser",
   "version": "0.13.2",
-  "description": "",
+  "description": "AdShield Defuser provides mitigation for AdShield trackers and advertisement services.",
   "type": "module",
   "scripts": {
     "build": "pnpm bundle",
     "shortwave:cache": "OUTPUT=$(readlink -f ./src/__generated__/shortwave.cache.ts) node scripts/generateShortwaveCache.mjs",
     "ztinywave:cache": "OUTPUT=$(readlink -f ./src/__generated__/ztinywave.cache.ts) node scripts/generateTinywaveCache.mjs",
-    "bundle": "esbuild src/index.ts --bundle --minify --define:global=window --inject:./esbuild.inject.ts --banner:js=\"$(cat ./banner.txt)\" --target=es2018,chrome68,safari13,firefox88 --outfile=./out/asdefuser.user.js"
+    "bundle": "esbuild src/index.ts --bundle --define:global=window --inject:./esbuild.inject.ts --banner:js=\"$(cat ./banner.txt)\" --target=es2018,chrome68,safari13,firefox88 --outfile=./out/asdefuser.user.js"
   },
   "keywords": [],
   "author": "HoJeong Go <seia@outlook.kr>",

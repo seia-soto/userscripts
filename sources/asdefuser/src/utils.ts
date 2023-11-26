@@ -6,6 +6,9 @@ export const createDebug = (namespace: string) => new Proxy(console.debug, {
 
 const debug = createDebug('[asdefuser:__utils__]');
 
+// Making a reference object is much more safer than using a rng
+export const secret = {};
+
 export const isSubFrame = () => {
 	try {
 		return window.self !== window.top;
@@ -63,7 +66,17 @@ export const getCallStack = () => {
 
 export type FeedbackFunction = (callStack?: ReturnType<typeof getCallStack>) => boolean;
 
-const isAsCall = (line: string) => line.endsWith('/script.min.js') || line.endsWith('/loader.min.js');
+let gotAsCall = false;
+
+const isAsCall = (line: string) => {
+	if (line.endsWith('/script.min.js') || line.endsWith('/loader.min.js')) {
+		gotAsCall = true;
+
+		return gotAsCall;
+	}
+
+	return false;
+};
 
 const isAnonCall = (line: string) => line.startsWith('[') || line.startsWith('<');
 
@@ -86,9 +99,13 @@ export const isAsSource: FeedbackFunction = (callStack = getCallStack()) => {
 
 	// Explicit checks for loose environments
 	// We'll refactor this code with something like `buildTestSuite` with array of tests, so we can counteract to multiple patterns
-	if (navigator.vendor === 'Apple Computer, Inc.') {
-		// Check direct as call signature
+	if (gotAsCall && navigator.vendor === 'Apple Computer, Inc.') {
 		const fullpath = location.origin + location.pathname;
+
+		if (trace[lastIndex] !== fullpath) {
+			return false;
+		}
+
 		let checkDirectAsCallSigIter = lastIndex;
 
 		while (checkDirectAsCallSigIter--) {
@@ -135,24 +152,36 @@ export const makeProxy = <F extends Function>(f: F, name = f.name) => {
 			const callStack = getCallStack();
 			const positive = isAsSource(callStack);
 
-			if (positive) {
-				throw new DOMException();
-			}
+			if (positive && !argArray.includes(secret)) {
+				debug(`apply name=${name} argArray=`, argArray, 'stack=', callStack.raw);
 
-			debug(`apply name=${name} argArray=`, argArray, 'stack=', callStack.raw);
+				throw new Error('asdefuser');
+			}
 
 			return Reflect.apply(target, thisArg, argArray) as F;
 		},
 		// Prevent ruining the call stack with "explicit" checks
+		set(target, p, newValue, receiver) {
+			const callStack = getCallStack();
+			const positive = isAsSourceFull(callStack);
+
+			if (positive) {
+				debug(`set name=${name} stack=`, callStack.raw);
+
+				throw new Error('asdefuser');
+			}
+
+			return Reflect.set(target, p, newValue, receiver);
+		},
 		setPrototypeOf(target, v) {
 			const callStack = getCallStack();
 			const positive = isAsSourceFull(callStack);
 
 			if (positive) {
-				throw new DOMException();
-			}
+				debug(`setPrototypeOf name=${name} stack=`, callStack.raw);
 
-			debug(`setPrototypeOf name=${name} stack=`, callStack.raw);
+				throw new Error('asdefuser');
+			}
 
 			return Reflect.setPrototypeOf(target, v);
 		},

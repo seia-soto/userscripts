@@ -30,3 +30,18 @@ If you can update the filter list as quickly as possible, the severity of this i
 However, it's important to note that the effectiveness of the filter list may depend on the frequency of updates and the ability to block newly-reported targets.
 
 At present, **the Apple Safari with UserScript app** is vulnerable to this issue.
+
+### Runtime obfuscation?
+
+Currently, some websites require additional help of ad blocker.
+We're investigating into the issue deeply now and finding a long term solution to this.
+
+```adb
+domain.tld##[style]>iframe[src="about:blank"]
+```
+
+Or you can add all websites:
+
+```adb
+ygosu.com,inven.co.kr,sportalkorea.com,hancinema.net,edaily.co.kr,enetnews.co.kr,genshinlab.com,loawa.com##[style]>iframe[src="about:blank"]
+```

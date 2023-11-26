@@ -1,5 +1,5 @@
 import * as cache from '../__generated__/ztinywave.cache.js';
-import {createDebug, documentReady} from '../utils.js';
+import {createDebug, documentReady, secret} from '../utils.js';
 
 type Data = Array<{tags: string}>;
 
@@ -81,7 +81,8 @@ const restore = (data: Data) => {
 	for (const entry of data) {
 		try {
 			if (entry.tags) {
-				document.head.insertAdjacentHTML('beforeend', entry.tags);
+				// @ts-expect-error secret
+				document.head.insertAdjacentHTML('beforeend', entry.tags, secret);
 			}
 		} catch (error) {
 			debug('restore error=', error);

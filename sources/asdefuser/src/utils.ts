@@ -1,6 +1,6 @@
 export const createDebug = (namespace: string) => new Proxy(console.debug, {
 	apply(target, thisArg, argArray) {
-		Reflect.apply(target, thisArg, [`${namespace} (${location.href})`, ...argArray as unknown[]]);
+		Reflect.apply(target, thisArg, [`${namespace}`, ...argArray as unknown[]]);
 	},
 });
 
@@ -14,7 +14,7 @@ export const isSubFrame = () => {
 	}
 };
 
-export const getStackTrace = () => {
+export const getCallStack = () => {
 	const e = new Error();
 
 	if (!e.stack) {
@@ -22,105 +22,139 @@ export const getStackTrace = () => {
 	}
 
 	if (e.stack.includes('@')) {
-		const trace = e.stack.split('\n');
-		const stack: string[] = [];
+		const raw = e.stack.split('\n').slice(2);
+		const trace: string[] = [];
 
-		for (const line of trace) {
+		if (navigator.userAgent.includes('Firefox/')) {
+			raw.splice(-1, 1);
+		}
+
+		for (const line of raw) {
 			const start = line.indexOf('@') + 1;
 			const lastColon = line.lastIndexOf(':');
 			const dump = lastColon < 0 ? line.slice(start) : line.slice(start, line.lastIndexOf(':', lastColon - 1));
 
-			if (dump.startsWith('[') || dump.startsWith('moz')) {
-				continue;
-			}
-
-			stack.push(dump);
+			trace.push(dump);
 		}
 
-		return stack;
+		return {
+			trace,
+			raw,
+		};
 	}
 
-	const trace = e.stack.slice(6).split('\n');
-	const stack: string[] = [];
+	const raw = e.stack.slice(6).split('\n').slice(2);
+	const trace: string[] = [];
 
-	for (const line of trace) {
+	for (const line of raw) {
 		const dump = line.slice(
 			(line.indexOf('(') + 1) || line.indexOf('at') + 3,
 			line.lastIndexOf(':', line.lastIndexOf(':') - 1),
 		);
 
-		if (dump.startsWith('<')) {
-			continue;
-		}
-
-		stack.push(dump);
+		trace.push(dump);
 	}
 
-	return stack;
+	return {
+		trace,
+		raw,
+	};
 };
 
-export type FeedbackFunction = () => unknown;
+export type FeedbackFunction = (callStack?: ReturnType<typeof getCallStack>) => boolean;
 
-const isAsCall = (line: string) => line.includes('/script.min.js') || line.includes('loader.min.js');
+const isAsCall = (line: string) => line.endsWith('/script.min.js') || line.endsWith('/loader.min.js');
 
-const isInlineCall = (line: string, fullpath: string) => line === fullpath;
+const isAnonCall = (line: string) => line.startsWith('[') || line.startsWith('<');
 
-export const isAsSource: FeedbackFunction = () => {
-	const stack = getStackTrace();
+export const isAsSource: FeedbackFunction = (callStack = getCallStack()) => {
+	const {trace} = callStack;
+	const lastIndex = trace.length - 1;
 
 	if (
-		stack[0].startsWith('https://local.adguard.org/')
-		|| stack[0].startsWith('webkit')
-		|| stack[0].startsWith('chrome')
+		trace[lastIndex].startsWith('chrome-')
+		|| trace[lastIndex].startsWith('webkit-')
+		|| trace[lastIndex].startsWith('moz-')
 	) {
-		return;
+		return false;
 	}
 
-	const fullpath = location.origin + location.pathname;
-	const report = stack.map(line => {
-		if (isInlineCall(line, fullpath)) {
-			return 1;
+	// Check last index
+	if (isAsCall(trace[lastIndex])) {
+		return true;
+	}
+
+	// Explicit checks for loose environments
+	// We'll refactor this code with something like `buildTestSuite` with array of tests, so we can counteract to multiple patterns
+	if (navigator.vendor === 'Apple Computer, Inc.') {
+		// Check direct as call signature
+		const fullpath = location.origin + location.pathname;
+		let checkDirectAsCallSigIter = lastIndex;
+
+		while (checkDirectAsCallSigIter--) {
+			if (
+				!isAnonCall(trace[checkDirectAsCallSigIter])
+				&& trace[checkDirectAsCallSigIter] !== fullpath
+			) {
+				// No additional checks, so we return immediately
+				return false;
+			}
 		}
 
+		return true;
+	}
+
+	return false;
+};
+
+export const isAsSourceFull: FeedbackFunction = (callStack = getCallStack()) => {
+	const {trace} = callStack;
+	const lastIndex = trace.length - 1;
+
+	if (
+		trace[lastIndex].startsWith('chrome-')
+		|| trace[lastIndex].startsWith('webkit-')
+		|| trace[lastIndex].startsWith('moz-')
+	) {
+		return false;
+	}
+
+	for (const line of trace) {
 		if (isAsCall(line)) {
-			return 2;
+			return true;
 		}
-
-		return 0;
-	});
-
-	const firstPositive = report.indexOf(2);
-
-	if (firstPositive < 0) {
-		return;
 	}
 
-	if (report.slice(0, firstPositive).reduce<number>((state, test) => state + test, 0) === firstPositive) {
-		debug('isAsSource stack=dumped', stack);
-
-		return true;
-	}
-
-	if (report.reduce<number>((state, test) => state + test, 0) === report.length * 2) {
-		debug('isAsSource stack=clean', stack);
-
-		return true;
-	}
+	return false;
 };
 
 // eslint-disable-next-line @typescript-eslint/ban-types
-export const makeProxy = <F extends Function>(f: F, feedback: FeedbackFunction) => {
+export const makeProxy = <F extends Function>(f: F, name = f.name) => {
 	const proxy = new Proxy(f, {
 		apply(target, thisArg, argArray) {
-			const alt = feedback();
+			const callStack = getCallStack();
+			const positive = isAsSource(callStack);
 
-			if (typeof alt === 'undefined') {
-				return Reflect.apply(target, thisArg, argArray) as F;
+			if (positive) {
+				throw new DOMException();
 			}
 
-			debug(`makeProxy name=${f?.name} args=`, argArray);
+			debug(`apply name=${name} argArray=`, argArray, 'stack=', callStack.raw);
 
-			return alt;
+			return Reflect.apply(target, thisArg, argArray) as F;
+		},
+		// Prevent ruining the call stack with "explicit" checks
+		setPrototypeOf(target, v) {
+			const callStack = getCallStack();
+			const positive = isAsSourceFull(callStack);
+
+			if (positive) {
+				throw new DOMException();
+			}
+
+			debug(`setPrototypeOf name=${name} stack=`, callStack.raw);
+
+			return Reflect.setPrototypeOf(target, v);
 		},
 	});
 

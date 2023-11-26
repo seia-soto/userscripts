@@ -3,7 +3,7 @@
 // @name AdShield Defuser
 // @description AdShield Defuser provides mitigation for AdShield trackers and advertisement services.
 // @author HoJeong Go <seia@outlook.kr>
-// @version 0.13.2
+// @version 0.13.3
 //
 // @grant none
 // @run-at document-start

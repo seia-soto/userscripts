@@ -1,4 +1,4 @@
-import {createDebug} from '../utils';
+import {createDebug, isAsSource} from '../utils';
 
 const debug = createDebug('[asdefuser:storageInterceptor]');
 
@@ -10,10 +10,10 @@ export const interceptStorage = () => {
 		apply(target, thisArg, argArray) {
 			const [key] = argArray as [string, string];
 
-			if (key === 'as_profile_cache' || key === 'adshield-analytics-uuid') {
+			if (isAsSource()) {
 				debug('prevented storage set request of key=' + key);
 
-				return true;
+				throw new DOMException('QuotaExceededError');
 			}
 
 			return Reflect.apply(target, thisArg, argArray) as unknown;

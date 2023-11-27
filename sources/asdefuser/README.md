@@ -31,18 +31,27 @@ However, it's important to note that the effectiveness of the filter list may de
 
 At present, **the Apple Safari with UserScript app** is vulnerable to this issue.
 
-### Runtime obfuscation? (Safari only)
+### Source frame transition
 
-Currently, some websites require additional help of ad blocker.
-We're investigating into the issue deeply now and finding a long term solution to this.
+Due to lack of proper Safari userscript support, some Safari users can experience ads on the websites AdShield applied.
+Previously, we detected the origin of JavaScript function call but they started to move code-base into main frame instead.
+Detecting AdShield function call signature is not that reliable at all, and the implementation is not fast enough for mobile users.
+We recommend you to use external tools to effectively mitigate this problem.
 
-```adb
-||adshield.domain.tld
-```
+Download external ad blocker supporting user rules or custom rules and enable them globally.
 
-Or you can add all websites:
+- [Unicorn Blocker:Adblock](https://apps.apple.com/us/app/unicorn-blocker-adblock/id1046714401)
+- [AdGuard Pro — adblock&privacy](https://apps.apple.com/kr/app/adguard-pro-adblock-privacy/id1126386264)
+
+In macOS Safari, you can use AdGuard for Safari.
+
+- [AdGuard for Safari](https://apps.apple.com/kr/app/adguard-for-safari/id1440147259)
+
+Put the following lines into user rules after installing external ad blocker:
 
 ```adb
 ||css-load.com
 ||07c225f3.online
 ```
+
+We're looking for long term solution for Safari now.

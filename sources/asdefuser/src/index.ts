@@ -1,6 +1,6 @@
 import {basedrop} from './loaders/basedrop.js';
 import {tinywave} from './loaders/ztinywave.js';
-import {getCallStack, makeProxy} from './utils.js';
+import {documentReady, getCallStack, makeProxy} from './utils.js';
 import {adShieldOriginCheck, adShieldStrictCheck} from './call-validators/suites.js';
 import {isAdShieldObj} from './obj-validators/index.js';
 
@@ -72,26 +72,29 @@ const bootstrap = () => {
 			},
 		});
 
-		// Remove already created ad elements
-		for (const el of document.querySelectorAll('iframe[src="about:blank"]')) {
-			el.remove();
-		}
+		void documentReady(document).then(() => {
+			// Remove already created ad elements
+			for (const el of document.querySelectorAll('iframe[src="about:blank"]')) {
+				el.remove();
+			}
 
-		const observer = new MutationObserver(records => {
-			for (const record of records) {
-				for (const node of record.addedNodes) {
-					if (node instanceof HTMLIFrameElement && node.getAttribute('src') === 'about:blank') {
-						node.remove();
+			const observer = new MutationObserver(records => {
+				for (const record of records) {
+					for (const node of record.addedNodes) {
+						if (node instanceof HTMLIFrameElement && node.getAttribute('src') === 'about:blank') {
+							node.remove();
+						}
 					}
 				}
-			}
-		});
+			});
 
-		observer.observe(document.body, {
-			subtree: true,
-		});
+			observer.observe(document.documentElement ?? document.body, {
+				childList: true,
+				subtree: true,
+			});
 
-		document.head.insertAdjacentHTML('afterbegin', '<style>iframe[src="about:blank"]{display:none!important}</style>');
+			document.head.insertAdjacentHTML('afterbegin', '<style>iframe[src="about:blank"]{display:none!important}</style>');
+		});
 	}
 
 	void basedrop();

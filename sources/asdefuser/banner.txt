@@ -34,7 +34,6 @@
 // @match https://*.enetnews.co.kr/*
 // @match http://genshinlab.com/*
 // @match https://genshinlab.com/*
-// @match http://loawa.com/*
 // @match https://loawa.com/*
 //
 // @namespace https://github.com/seia-soto/userscripts

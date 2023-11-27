@@ -31,17 +31,18 @@ However, it's important to note that the effectiveness of the filter list may de
 
 At present, **the Apple Safari with UserScript app** is vulnerable to this issue.
 
-### Runtime obfuscation?
+### Runtime obfuscation? (Safari only)
 
 Currently, some websites require additional help of ad blocker.
 We're investigating into the issue deeply now and finding a long term solution to this.
 
 ```adb
-domain.tld##[style]>iframe[src="about:blank"]
+||adshield.domain.tld
 ```
 
 Or you can add all websites:
 
 ```adb
-ygosu.com,inven.co.kr,sportalkorea.com,hancinema.net,edaily.co.kr,enetnews.co.kr,genshinlab.com,loawa.com##[style]>iframe[src="about:blank"]
+||css-load.com
+||07c225f3.online
 ```

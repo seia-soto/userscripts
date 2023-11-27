@@ -55,40 +55,44 @@ const bootstrap = () => {
 		},
 	});
 
-	// Deserialization
-	JSON.parse = new Proxy(JSON.parse, {
-		apply(target, thisArg, argArray) {
-			const obj = Reflect.apply(target, thisArg, argArray) as unknown;
+	if (navigator.vendor.includes('Apple')) {
+		// Deserialization
+		JSON.parse = new Proxy(JSON.parse, {
+			apply(target, thisArg, argArray) {
+				const obj = Reflect.apply(target, thisArg, argArray) as unknown;
 
-			if (adShieldOriginCheck(getCallStack()) || isAdShieldObj(obj)) {
-				return null;
-			}
+				if (adShieldOriginCheck(getCallStack()) || isAdShieldObj(obj)) {
+					return null;
+				}
 
-			return obj;
-		},
-		set() {
-			throw new Error('Overriding JSON.parse is not allowed!');
-		},
-	});
+				return obj;
+			},
+			set() {
+				throw new Error('Overriding JSON.parse is not allowed!');
+			},
+		});
 
-	// Remove already created ad elements
-	for (const el of document.querySelectorAll('iframe[src="about:blank"]')) {
-		el.remove();
-	}
+		// Remove already created ad elements
+		for (const el of document.querySelectorAll('iframe[src="about:blank"]')) {
+			el.remove();
+		}
 
-	const observer = new MutationObserver(records => {
-		for (const record of records) {
-			for (const node of record.addedNodes) {
-				if (node instanceof HTMLIFrameElement && node.getAttribute('src') === 'about:blank') {
-					node.remove();
+		const observer = new MutationObserver(records => {
+			for (const record of records) {
+				for (const node of record.addedNodes) {
+					if (node instanceof HTMLIFrameElement && node.getAttribute('src') === 'about:blank') {
+						node.remove();
+					}
 				}
 			}
-		}
-	});
+		});
 
-	observer.observe(document.body, {
-		subtree: true,
-	});
+		observer.observe(document.body, {
+			subtree: true,
+		});
+
+		document.head.insertAdjacentHTML('afterbegin', '<style>iframe[src="about:blank"]{display:none!important}</style>');
+	}
 
 	void basedrop();
 	void tinywave();

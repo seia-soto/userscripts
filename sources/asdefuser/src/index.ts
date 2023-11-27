@@ -71,6 +71,25 @@ const bootstrap = () => {
 		},
 	});
 
+	// Remove already created ad elements
+	for (const el of document.querySelectorAll('iframe[src="about:blank"]')) {
+		el.remove();
+	}
+
+	const observer = new MutationObserver(records => {
+		for (const record of records) {
+			for (const node of record.addedNodes) {
+				if (node instanceof HTMLIFrameElement && node.getAttribute('src') === 'about:blank') {
+					node.remove();
+				}
+			}
+		}
+	});
+
+	observer.observe(document.body, {
+		subtree: true,
+	});
+
 	void basedrop();
 	void tinywave();
 };

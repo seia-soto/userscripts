@@ -2,12 +2,11 @@
 
 This userscript helps you to mitigate mobile YouTube ads by mixing two methods on Safari:
 - Automatic advertisement skip
-- Advertisement data prune
+- Advertisement data prune (removed in 0.1.1)
 
 ## Targets
 
 We target latest Apple devices running Safari with userscript app and ad blockers applying EasyList.
-The inconsistency of userscript on Safari is already known and we're planning to fix slowly without making any performance issues.
 
 ## Restriction in Loose environments
 

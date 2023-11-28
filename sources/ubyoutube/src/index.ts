@@ -1,129 +1,36 @@
-import {isSubFrame} from './utils';
-
-type YtAdProperties = {
-	adPlacements: Array<Record<string, unknown>>;
-	adSlots: Array<Record<string, unknown>>;
-};
-
-type YtWindow = typeof window & {
-	ytInitialPlayerResponse: YtAdProperties;
-};
+import {documentReady, isSubFrame} from './utils';
 
 if (isSubFrame()) {
 	throw new Error('UBYOUTUBE_SUBFRAME_FOUND');
 }
 
-const playerWindow = window as YtWindow;
-
-const resetPropertyDependsOnType = (obj: Record<string, unknown>, key: string) => {
-	if (typeof obj[key] === 'undefined') {
-		return obj;
-	}
-
-	if (typeof obj[key] === 'boolean') {
-		obj[key] = false;
-	}
-
-	if (Array.isArray(obj[key])) {
-		obj[key] = [];
-	}
-
-	return obj;
-};
-
-const pruneAdProperties = (obj: unknown) => {
-	if (typeof obj !== 'object') {
-		return obj;
-	}
-
-	// @ts-expect-error optional
-	if (typeof obj?.playerResponse === 'object') {
-		// @ts-expect-error optional
-		obj.playerResponse = pruneAdProperties(obj.playerResponse);
-	}
-
-	// @ts-expect-error optional
-	if (typeof obj?.responseContext === 'object') {
-		// @ts-expect-error optional
-		obj.responseContext = pruneAdProperties(obj.responseContext);
-	}
-
-	// @ts-expect-error optional
-	resetPropertyDependsOnType(obj, 'adPlacements');
-	// @ts-expect-error optional
-	resetPropertyDependsOnType(obj, 'playerAds');
-	// @ts-expect-error optional
-	resetPropertyDependsOnType(obj, 'adSlots');
-
-	console.debug('pruneAdProperties', obj);
-
-	return obj;
-};
-
-const proxyYtInitialPlayerResponse = () => {
-	if (typeof playerWindow.ytInitialPlayerResponse === 'undefined') {
-		console.debug('ytInitialPlayerResponse is not defined');
-
-		return;
-	}
-
-	console.debug('proxy ytInitialPlayerResponse.{adPlacements,adSlots}');
-
-	playerWindow.ytInitialPlayerResponse.adPlacements = new Proxy(playerWindow.ytInitialPlayerResponse.adPlacements, {
-		get(_target, _p, _receiver) {
-			console.debug('get ytInitialPlayerResponse.adPlacements');
-
-			return [];
-		},
-	});
-	playerWindow.ytInitialPlayerResponse.adSlots = new Proxy(playerWindow.ytInitialPlayerResponse.adSlots, {
-		get(_target, _p, _receiver) {
-			console.debug('get ytInitialPlayerResponse.adSlots');
-
-			return [];
-		},
-	});
-};
-
-const proxyJsonParse = () => {
-	console.debug('proxy JSON.parse');
-
-	playerWindow.JSON.parse = new Proxy(playerWindow.JSON.parse, {
-		apply(target, thisArg, argArray) {
-			return pruneAdProperties(Reflect.apply(target, thisArg, argArray)) as unknown;
-		},
-	});
-
-	console.debug('proxy Response.prototype.json');
-
-	playerWindow.Response.prototype.json = new Proxy(playerWindow.Response.prototype.json, {
-		async apply(target, thisArg, argArray) {
-			const altHandle = async () => pruneAdProperties(await Reflect.apply(target, thisArg, argArray)) as unknown;
-
-			return altHandle();
-		},
-	});
-};
-
 const subscribeElements = (videoCallback: (video: HTMLVideoElement) => unknown) => {
-	videoCallback(document.querySelector('video')!);
+	let video = document.querySelector('video');
 
-	const observer = new MutationObserver(records => {
-		for (const record of records) {
-			for (const node of record.addedNodes) {
-				if (node instanceof HTMLVideoElement) {
-					console.debug('subscribeVideoPlayer found new video node');
+	if (video) {
+		console.debug('subscribeElements found HTMLVideoElement observed=false', video);
 
-					videoCallback(node);
-				}
-			}
+		videoCallback(video);
+	}
+
+	const observer = new MutationObserver(_records => {
+		const next = document.querySelector('video');
+
+		if (next && video !== next) {
+			console.debug('subscribeElements found HTMLVideoElement observed=true', video);
+
+			video = next;
+
+			videoCallback(next);
 		}
 	});
 
-	observer.observe(document.body, {
+	observer.observe(document.documentElement || document.body, {
 		childList: true,
 		subtree: true,
 	});
+
+	console.debug('subscribeElements started observasion');
 };
 
 const subscribePlaybackEvent = (video: HTMLVideoElement, cb: (video: HTMLVideoElement) => unknown) => {
@@ -136,20 +43,46 @@ const subscribePlaybackEvent = (video: HTMLVideoElement, cb: (video: HTMLVideoEl
 	}
 };
 
-const skipAdContainer = async (video: HTMLVideoElement) => {
+const isAdContainerPresent = () => {
 	const scrubber = document.querySelector('.ytp-scrubber-container>div');
 
 	if (!scrubber) {
-		throw new Error('UBYOUTUBE_SCRUBBER_NOT_FOUND');
+		return;
 	}
 
-	if (!getComputedStyle(scrubber).backgroundColor.includes('255, 204')) {
+	return getComputedStyle(scrubber).backgroundColor.includes('255, 204');
+};
+
+const trySkipButton = () => {
+	const button: HTMLButtonElement = document.querySelector('button.ytp-ad-skip-button-modern.ytp-button')!;
+
+	if (button) {
+		console.debug('trySkipButton', button);
+
+		button.click();
+
+		return true;
+	}
+
+	return false;
+};
+
+const skipAdContainer = async (video: HTMLVideoElement) => new Promise<number>(resolve => {
+	if (!isAdContainerPresent()) {
 		console.debug('skipAdContainer valid color signature not found');
+
+		resolve(0);
 
 		return;
 	}
 
-	console.debug('skipAdContainer set={muted,currentTime} apply=play');
+	if (trySkipButton()) {
+		resolve(2);
+
+		return;
+	}
+
+	console.debug('skipAdContainer set={muted,currentTime}');
 
 	video.muted = true;
 	video.currentTime = video.duration - 0.1;
@@ -157,23 +90,36 @@ const skipAdContainer = async (video: HTMLVideoElement) => {
 	const onEnd = () => {
 		video.muted = false;
 
-		console.debug('skipAdContainer click skip button');
-
-		const button: HTMLButtonElement = document.querySelector('button.ytp-ad-skip-button-modern.ytp-button')!;
-
-		button?.click();
+		trySkipButton();
+		resolve(video.duration);
 	};
 
 	video.addEventListener('ended', onEnd);
 
-	await video.play();
-};
+	console.debug('skipAdContainer apply=play');
+
+	void video.play();
+});
 
 console.debug('ubyoutube installed');
 
-proxyYtInitialPlayerResponse();
-proxyJsonParse();
+void documentReady(document).then(() => {
+	subscribeElements(video => {
+		let lock = false;
 
-subscribeElements(video => {
-	subscribePlaybackEvent(video, skipAdContainer);
+		subscribePlaybackEvent(video, async () => {
+			if (lock) {
+				return;
+			}
+
+			lock = true;
+
+			while (isAdContainerPresent()) {
+				// eslint-disable-next-line no-await-in-loop
+				await skipAdContainer(video);
+			}
+
+			lock = false;
+		});
+	});
 });

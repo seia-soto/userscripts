@@ -3,7 +3,7 @@
 // @name Universal YouTube
 // @description Block YouTube Ads on Safari.
 // @author HoJeong Go <seia@outlook.kr>
-// @version 0.1.0
+// @version 0.1.1
 //
 // @grant none
 // @run-at document-start

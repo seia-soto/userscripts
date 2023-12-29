@@ -24,8 +24,8 @@ importers:
   sources/asdefuser:
     dependencies:
       adshield-defuser:
-        specifier: github:seia-soto/adshield-defuser#v0.0.13
-        version: github.com/seia-soto/adshield-defuser/022807274c136ea72f58604083d2abd5eefe605f
+        specifier: github:seia-soto/adshield-defuser#v0.0.14
+        version: github.com/seia-soto/adshield-defuser/8a326ed33b64229f04bfd0d8950f31239a418231
       buffer:
         specifier: ^6.0.3
         version: 6.0.3
@@ -681,10 +681,6 @@ packages:
     dependencies:
       base64-js: 1.5.1
       ieee754: 1.2.1
-    dev: false
-
-  /buffertly@1.2.0:
-    resolution: {integrity: sha512-AEBkeL/Kx6+oRBArRosHPUGTNXrV3wn65JPnuDgV+1mSxY4ohpvuK1B80rWAXdQP/xJm08c7vtqnKxy5+kukMw==}
     dev: false
 
   /callsites@3.1.0:
@@ -1453,12 +1449,11 @@ packages:
     engines: {node: '>=10'}
     dev: true
 
-  github.com/seia-soto/adshield-defuser/022807274c136ea72f58604083d2abd5eefe605f:
-    resolution: {tarball: https://codeload.github.com/seia-soto/adshield-defuser/tar.gz/022807274c136ea72f58604083d2abd5eefe605f}
+  github.com/seia-soto/adshield-defuser/8a326ed33b64229f04bfd0d8950f31239a418231:
+    resolution: {tarball: https://codeload.github.com/seia-soto/adshield-defuser/tar.gz/8a326ed33b64229f04bfd0d8950f31239a418231}
     name: adshield-defuser
-    version: 0.0.13
+    version: 0.0.14
     engines: {node: '>=20.6.0'}
     dependencies:
-      buffertly: 1.2.0
       protobufjs: 7.2.5
     dev: false

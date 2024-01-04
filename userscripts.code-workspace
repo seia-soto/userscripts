@@ -8,6 +8,9 @@
 		},
 		{
 			"path": "sources/ubyoutube"
+		},
+		{
+			"path": "sources/dudefuser"
 		}
 	],
 	"settings": {}

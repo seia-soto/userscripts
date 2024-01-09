@@ -3,7 +3,7 @@
 // @name Devuploads Defuser
 // @description Devuploads defuser for compatible environments.
 // @author HoJeong Go <seia@outlook.kr>
-// @version 0.0.1
+// @version 0.0.2
 //
 // @grant none
 // @run-at document-start

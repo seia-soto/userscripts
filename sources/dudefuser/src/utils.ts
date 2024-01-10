@@ -31,3 +31,12 @@ export const documentReady = async (document: Document) => {
 		});
 	});
 };
+
+export const generateYyyyMmDd = (date: Date) => {
+	let str = date.getFullYear().toString();
+
+	str += (date.getMonth() + 1).toString().padStart(2, '0');
+	str += (date.getDate()).toString().padStart(2, '0');
+
+	return str;
+};

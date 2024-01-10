@@ -1,8 +1,7 @@
-import {format} from 'date-fns';
 import QueryString from 'qs';
 import {hookCompiledModuleLoader} from './hooks/modules';
 import {decode, encode} from './hooks/token';
-import {makeProxy} from './utils';
+import {generateYyyyMmDd, makeProxy} from './utils';
 
 const bootstrap = () => {
 	hookCompiledModuleLoader();
@@ -39,6 +38,7 @@ const bootstrap = () => {
 				.replace(/\[scr=undefined\]/g, '')
 				.replace(/\[scr=chrome-extension:[^\]]+\]/g, '')
 				.replace('[referer=]', `[referer=${location.host}]`)
+				.replace('[adblock_detected=1]', '[adblock_detected=0]')
 				.replace('[finum=0]', '[finum=6]')
 				.replace('[finun=0]', '[finun=2]')
 				.replace('[fivis=0]', '[fivis=1]')
@@ -46,7 +46,7 @@ const bootstrap = () => {
 				.replace('[fdref42=inline]', '[fdref42=block]')
 				.replace(/\[fdref44=[a-z]+\]/g, '[fdref44=1273.41px]');
 
-			content += `[scr=https://securepubads.g.doubleclick.net/pagead/managed/js/gpt/m${format(new Date(), 'yyyymmdd')}${Math.floor(Math.random() * 3999)}/pubads_impl.js?cb=${Math.floor(Math.random() * 10e6)}]`;
+			content += `[scr=https://securepubads.g.doubleclick.net/pagead/managed/js/gpt/m${generateYyyyMmDd(new Date())}${Math.floor(Math.random() * 3999)}/pubads_impl.js?cb=${Math.floor(Math.random() * 10e6)}]`;
 
 			const refined = encode(content);
 

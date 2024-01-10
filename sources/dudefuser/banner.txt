@@ -3,12 +3,13 @@
 // @name Devuploads Defuser
 // @description Devuploads defuser for compatible environments.
 // @author HoJeong Go <seia@outlook.kr>
-// @version 0.0.2
+// @version 0.0.3
 //
 // @grant none
 // @run-at document-start
 //
 // @match https://dropgalaxy.com/*
+// @match https://dropgalaxy.co/*
 // @match https://thecubexguide.com/*
 // @match https://djxmaza.in/*
 // @match https://dev.miuiflash.com/*

@@ -28,6 +28,8 @@ jobs:
           pnpm install
           pnpm -r build --minify
           find ./ -name "*.user.js" -type f -exec cp {} ./pages \;
+          find ./ -name "*.filters.txt" -type f -exec cp {} ./pages \;
+          find ./ -name "*.hosts.txt" -type f -exec cp {} ./pages \;
       - name: Tree
         if: always()
         run: |

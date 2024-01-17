@@ -3,7 +3,7 @@
 // @name AdShield Defuser
 // @description AdShield Defuser provides mitigation for AdShield trackers and advertisement services.
 // @author HoJeong Go <seia@outlook.kr>
-// @version 0.13.9
+// @version 0.13.10
 //
 // @grant none
 // @run-at document-start
@@ -12,31 +12,19 @@
 // @match https://ygosu.com/*
 // @match http://*.ygosu.com/*
 // @match https://*.ygosu.com/*
-// @match http://inven.co.kr/*
-// @match https://inven.co.kr/*
-// @match http://*.inven.co.kr/*
 // @match https://*.inven.co.kr/*
-// @match http://sportalkorea.com/*
 // @match https://sportalkorea.com/*
-// @match http://*.sportalkorea.com/*
 // @match https://*.sportalkorea.com/*
-// @match http://hancinema.net/*
-// @match https://hancinema.net/*
-// @match http://*.hancinema.net/*
 // @match https://*.hancinema.net/*
-// @match http://edaily.co.kr/*
-// @match https://edaily.co.kr/*
-// @match http://*.edaily.co.kr/*
-// @match https://*.edaily.co.kr/*
-// @match http://enetnews.co.kr/*
-// @match https://enetnews.co.kr/*
-// @match http://*.enetnews.co.kr/*
-// @match https://*.enetnews.co.kr/*
+// @match https://www.edaily.co.kr/*
+// @match http://www.enetnews.co.kr/*
+// @match https://www.enetnews.co.kr/*
 // @match http://genshinlab.com/*
 // @match https://genshinlab.com/*
 // @match https://loawa.com/*
 // @match https://forexlive.com/*
 // @match https://*.forexlive.com/*
+// @match https://www.dogdrip.net/*
 //
 // @namespace https://github.com/seia-soto/userscripts
 // @homepageURL https://github.com/seia-soto/userscripts

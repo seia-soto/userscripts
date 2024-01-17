@@ -1,0 +1,8 @@
+[Adblock Plus 2.0]
+! Title: AdShield Defuser
+! Description: Blocks AdShield related hosts.
+! Expires: 1 day
+! Version: 01172024+a
+
+||07c225f3.online^
+||css-load.com^

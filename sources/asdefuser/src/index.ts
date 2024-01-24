@@ -1,14 +1,32 @@
+import {adShieldCallAnalyzer, knownAdShieldOrigins} from './call-validators/analyzers.js';
+import {adShieldOriginCheck, adShieldStrictCheck} from './call-validators/suites.js';
 import {basedrop} from './loaders/basedrop.js';
 import {tinywave} from './loaders/ztinywave.js';
-import {documentReady, getCallStack, makeProxy} from './utils.js';
-import {adShieldOriginCheck, adShieldStrictCheck} from './call-validators/suites.js';
 import {isAdShieldObj} from './obj-validators/index.js';
+import {documentReady, getCallStack, makeProxy} from './utils.js';
 
 const bootstrap = () => {
 	Element.prototype.remove = makeProxy(Element.prototype.remove, 'Element.prototype.remove');
 	Element.prototype.removeChild = makeProxy(Element.prototype.removeChild, 'Element.prototype.removeChild');
 	Element.prototype.insertAdjacentHTML = makeProxy(Element.prototype.insertAdjacentHTML, 'Element.prototype.insertAdjacentHTML');
+
+	// Scripting
 	Element.prototype.setAttribute = makeProxy(Element.prototype.setAttribute, 'Element.prototype.setAttribute');
+	HTMLScriptElement.prototype.setAttribute = new Proxy(HTMLScriptElement.prototype.setAttribute, {
+		apply(target, thisArg, argArray: [string, string]) {
+			if (argArray[0] === 'src' && typeof argArray[1] === 'string') {
+				if (adShieldCallAnalyzer.analyze(argArray[1])) {
+					return;
+				}
+			}
+
+			Reflect.apply(target, thisArg, argArray);
+		},
+		setPrototypeOf(_target, _v) {
+			return false;
+		},
+	});
+
 	EventTarget.prototype.addEventListener = makeProxy(EventTarget.prototype.addEventListener, 'EventTarget.prototype.addEventListener');
 	// Prevent messaging to inline
 	MessagePort.prototype.postMessage = makeProxy(MessagePort.prototype.postMessage, 'MessagePort.prototype.postMessage');
@@ -16,6 +34,20 @@ const bootstrap = () => {
 	// Prevent useless timer apis for performance
 	window.setInterval = makeProxy(setInterval, 'setInterval');
 	window.setTimeout = makeProxy(setTimeout, 'setInterval');
+
+	window.decodeURIComponent = new Proxy(decodeURIComponent, {
+		apply(target, thisArg, argArray: [string]) {
+			const payload = Reflect.apply(target, thisArg, argArray);
+
+			for (const domain of knownAdShieldOrigins) {
+				if (payload.includes(domain)) {
+					return '';
+				}
+			}
+
+			return payload;
+		},
+	});
 
 	// Local Storage
 	localStorage.removeItem('as_profile_cache');

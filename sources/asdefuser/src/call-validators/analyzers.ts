@@ -26,9 +26,10 @@ export const annoymousCallAnalyzer = new MemoizedCallAnalyzer(line => line.start
 
 export const extensionCallAnalyzer = new MemoizedCallAnalyzer(line => line.startsWith('chrome') || line.startsWith('webkit') || line.startsWith('moz'));
 
-const knownAdShieldOrigins = [
-	'https://07c225f3.online',
-	'https://css-load.com',
+export const knownAdShieldOrigins = [
+	'07c225f3.online',
+	'css-load.com',
+	'content-loader.com',
 ];
 
 export const adShieldCallAnalyzer = new MemoizedCallAnalyzer(line => {
@@ -36,12 +37,8 @@ export const adShieldCallAnalyzer = new MemoizedCallAnalyzer(line => {
 		return true;
 	}
 
-	if (!location.origin.endsWith('.online') && line.includes('.online')) {
-		return true;
-	}
-
 	for (const origin of knownAdShieldOrigins) {
-		if (line.startsWith(origin)) {
+		if (line.includes(origin)) {
 			return true;
 		}
 	}

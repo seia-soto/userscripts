@@ -5,7 +5,7 @@
     "type": "module",
     "scripts": {
         "build": "pnpm bundle",
-        "bundle": "esbuild src/index.ts --bundle --define:global=window --banner:js=\"$(cat ./banner.txt)\" --target=es2018,chrome68,safari13,firefox88 --outfile=./out/ubyoutube.user.js"
+        "bundle": "esbuild src/index.ts --bundle --define:global=window --banner:js=\"$(cat ./banner.txt)\" --target=es2018,chrome68,safari13,firefox88 --outfile=/Users/aa/local/userscripts/ubyoutube.user.js"
     },
     "keywords": [],
     "author": "HoJeong Go <seia@outlook.kr>",

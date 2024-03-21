@@ -1,5 +1,6 @@
 import * as cache from '../__generated__/ztinywave.cache.js';
-import {createDebug, documentReady} from '../utils.js';
+import {secret} from '../secret.js';
+import {createDebug, documentReady, getRandomAdShieldHost} from '../utils.js';
 
 type Data = Array<{tags: string}>;
 
@@ -78,9 +79,34 @@ const restore = (data: Data) => {
 
 	let failed = 0;
 
+	const far: {
+		createdAt: number;
+		tags: string[];
+	} = {
+		createdAt: Date.now(),
+		tags: [],
+	};
+
 	for (const entry of data) {
 		try {
 			if (entry.tags) {
+				if (/href=['"]resources:\/\/.+['"]/.test(entry.tags)) {
+					const [, endpoint] = /href=['"]resources:\/\/(.+)['"]/.exec(entry.tags)!;
+					const url = 'https://' + getRandomAdShieldHost() + '/resources/' + endpoint + '?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJuYW1lIjoiIiwiZW1haWwiOiIiLCJleHAiOjE3MTExMjAyMDAsImlhdCI6MTcxMTAzMzgwMH0.Lkfki2-T7Ql9K7EBogwftt4b5i3Hc_F3tTuyyyv84yM';
+
+					void (async () => {
+						const response = await fetch(url);
+						const text = await response.text();
+
+						far.tags.push(`<style>${text}</style>`);
+
+						// @ts-expect-error asdf-protected
+						localStorage.setItem('asdf-protected-far', JSON.stringify(far), secret);
+					})();
+
+					entry.tags = `<link rel="stylesheet" href="${url}">`;
+				}
+
 				document.head.insertAdjacentHTML('beforeend', entry.tags);
 			}
 		} catch (error) {
@@ -131,6 +157,29 @@ const extract = async () => {
 };
 
 export const tinywave = async () => {
+	try {
+		// @ts-expect-error asdf-protected
+		const resource = localStorage.getItem('asdf-protected-far', secret);
+
+		if (resource) {
+			const data = JSON.parse(resource) as {createdAt: number; tags: string[]};
+
+			if (Date.now() - data.createdAt < 1000 * 60 * 60 * 24 * 30) {
+				debug('far loaded', data);
+
+				for (const tag of data.tags) {
+					document.head.insertAdjacentHTML('beforeend', tag);
+				}
+
+				return;
+			}
+
+			debug('far expired');
+		}
+	} catch (e) {
+		debug('failed to initialise far', e);
+	}
+
 	const payload = await extract();
 
 	debug('payload', payload);

@@ -94,6 +94,8 @@ export const makeProxy = <F extends Function>(f: F, name = f.name) => {
 	return proxy;
 };
 
+export const getRandomAdShieldHost = () => ['css-load.com', 'content-loader.com', 'error-report.com'][Math.floor(Math.random() * 3)];
+
 export const documentReady = async (document: Document) => {
 	if (document.readyState !== 'loading') {
 		return true;

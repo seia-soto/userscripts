@@ -2,8 +2,13 @@
 ! Title: AdShield Defuser
 ! Description: Blocks AdShield related hosts.
 ! Expires: 1 day
-! Version: 01172024+a
+! Version: 03222024+a
 
-||07c225f3.online^
-||css-load.com^
-||content-loader.com^
+@@||07c225f3.online^$~script
+@@||css-load.com^$~script
+@@||content-loader.com^$~script
+@@||error-report.com^$~script
+||07c225f3.online^$script
+||css-load.com^$script
+||content-loader.com^$script
+||error-report.com^$script

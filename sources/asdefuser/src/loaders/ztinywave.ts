@@ -92,11 +92,15 @@ const restore = (data: Data) => {
 			if (entry.tags) {
 				if (/href=['"]resources:\/\/.+['"]/.test(entry.tags)) {
 					const [, endpoint] = /href=['"]resources:\/\/(.+)['"]/.exec(entry.tags)!;
-					const url = 'https://' + getRandomAdShieldHost() + '/resources/' + endpoint + '?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJuYW1lIjoiIiwiZW1haWwiOiIiLCJleHAiOjE3MTExMjAyMDAsImlhdCI6MTcxMTAzMzgwMH0.Lkfki2-T7Ql9K7EBogwftt4b5i3Hc_F3tTuyyyv84yM';
+					const url = 'https://' + getRandomAdShieldHost() + '/resources/' + endpoint + '?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJuYW1lIjoiIiwiZW1haWwiOiIiLCJleHAiOjE3MTE3OTAwNTIsImlhdCI6MTcxMTcwMzY1Mn0.27MjdPtrJN6BA7y2TWNPypwO_ipROd-bCk0eq4LFzTQ';
 
 					void (async () => {
 						const response = await fetch(url);
 						const text = await response.text();
+
+						if (!text) {
+							return;
+						}
 
 						far.tags.push(`<style>${text}</style>`);
 
@@ -164,7 +168,7 @@ export const tinywave = async () => {
 		if (resource) {
 			const data = JSON.parse(resource) as {createdAt: number; tags: string[]};
 
-			if (Date.now() - data.createdAt < 1000 * 60 * 60 * 24 * 30) {
+			if (JSON.stringify(data.tags) !== '[""]' && Date.now() - data.createdAt < 1000 * 60 * 60 * 24 * 30) {
 				debug('far loaded', data);
 
 				for (const tag of data.tags) {

@@ -1,5 +1,5 @@
 import {config} from '../config.js';
-import {isAdShieldCall} from '../adshield/validators.js';
+import {adshieldKeywords, isAdShieldCall} from '../adshield/validators.js';
 import {generateCallStack} from './call-stack.js';
 import {createDebug} from './logger.js';
 
@@ -15,6 +15,43 @@ export const protectFunction = <F extends (...args: any[]) => any>(f: F, name = 
 
 	return new Proxy(f, {
 		apply(target, thisArg, argArray) {
+			if (isAdShieldCall()) {
+				debug('- apply name=' + name, 'args=', argArray, 'stack=', generateCallStack());
+
+				return false;
+			}
+
+			if (config.debug) {
+				debug('+ apply name=' + name, 'args=', argArray, 'stack=', generateCallStack());
+			}
+
+			return Reflect.apply(target, thisArg, argArray) as unknown;
+		},
+		setPrototypeOf(target, v) {
+			debug('- setPrototypeOf name=' + name, 'v=', v, 'stack=', generateCallStack());
+
+			return false;
+		},
+	});
+};
+
+export const protectFunctionWithArguments = <F extends (...args: any[]) => any>(f: F, name = f.name) => {
+	debug('creating protected function', name);
+
+	return new Proxy(f, {
+		apply(target, thisArg, argArray) {
+			for (const arg of argArray) {
+				if (typeof arg === 'string') {
+					for (const domain of adshieldKeywords) {
+						if (arg.includes(domain)) {
+							debug('- apply name=' + name, 'args=', argArray, 'stack=', generateCallStack());
+
+							return false;
+						}
+					}
+				}
+			}
+
 			if (isAdShieldCall()) {
 				debug('- apply name=' + name, 'args=', argArray, 'stack=', generateCallStack());
 

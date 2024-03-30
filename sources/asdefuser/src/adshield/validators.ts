@@ -5,6 +5,12 @@ export const adshieldDomains = [
 	'07c225f3.online',
 	'content-loader.com',
 	'error-report.com',
+	'html-load.com',
+];
+
+export const adshieldKeywords = [
+	...adshieldDomains,
+	'blocking',
 ];
 
 const adshieldDomainSize = adshieldDomains.length;
@@ -18,7 +24,7 @@ export const isAdShieldCall = (trace = justifyCallStack()) => {
 	}
 
 	for (const domain of adshieldDomains) {
-		if (trace[0].includes(domain)) {
+		if (trace[trace.length - 1].includes(domain)) {
 			return true;
 		}
 	}

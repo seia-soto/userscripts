@@ -3,6 +3,7 @@ import {adShieldOriginCheck, adShieldStrictCheck} from './call-validators/suites
 import {basedrop} from './loaders/basedrop.js';
 import {tinywave} from './loaders/ztinywave.js';
 import {isAdShieldObj} from './obj-validators/index.js';
+import {secret} from './secret.js';
 import {documentReady, getCallStack, makeProxy} from './utils.js';
 
 const bootstrap = () => {
@@ -53,11 +54,39 @@ const bootstrap = () => {
 	localStorage.removeItem('as_profile_cache');
 	localStorage.removeItem('adshield-analytics-uuid');
 
-	Storage.prototype.setItem = new Proxy(Storage.prototype.setItem, {
+	Storage.prototype.getItem = new Proxy(Storage.prototype.getItem, {
 		apply(target, thisArg, argArray) {
 			const [key] = argArray as [string, string];
 
+			if (key.startsWith('asdf-protected-') && argArray[1] !== secret) {
+				throw new DOMException('QuotaExceededError');
+			}
+
+			return Reflect.apply(target, thisArg, argArray) as unknown;
+		},
+	});
+
+	Storage.prototype.removeItem = new Proxy(Storage.prototype.removeItem, {
+		apply(target, thisArg, argArray) {
+			const [key] = argArray as [string, string];
+
+			if (key.startsWith('asdf-protected-') && argArray[1] !== secret) {
+				throw new DOMException('QuotaExceededError');
+			}
+
+			return Reflect.apply(target, thisArg, argArray) as unknown;
+		},
+	});
+
+	Storage.prototype.setItem = new Proxy(Storage.prototype.setItem, {
+		apply(target, thisArg, argArray) {
+			const [key] = argArray as [string, string, string];
+
 			if (adShieldStrictCheck(getCallStack()) || key.startsWith('as_') || key.startsWith('as-') || key.includes('adshield')) {
+				throw new DOMException('QuotaExceededError');
+			}
+
+			if (key.startsWith('asdf-protected-') && argArray[2] !== secret) {
 				throw new DOMException('QuotaExceededError');
 			}
 

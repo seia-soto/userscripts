@@ -1,17 +1,19 @@
 import * as cache from '../__generated__/ztinywave.cache.js';
-import {secret} from '../secret.js';
-import {createDebug, documentReady, getRandomAdShieldHost} from '../utils.js';
+import {getResourceToken, predefinedToken, resolveResourceUrls} from '../adshield/resources.js';
+import {type Entity, EntityTypes, insertEntities, putCachedEntities, tryCachedEntities} from '../utils/entities.js';
+import {documentReady} from '../utils/frame.js';
+import {createDebug} from '../utils/logger.js';
 
 type Data = Array<{tags: string}>;
 
-const debug = createDebug('[asdefuser:tinywave]');
+const debug = createDebug('ztinywave');
 
 const decode = (payload: string) => {
 	const id = payload.slice(0, 4);
 	const key = cache.source.find(store => store.id === id);
 
 	if (!key) {
-		throw new Error('DEFUSER_TINYWAVE_KEY_NOT_FOUND');
+		throw new Error('DEFUSER_ZTINYWAVE_KEY_NOT_FOUND');
 	}
 
 	const ra = String.fromCharCode(key.reserved1);
@@ -74,119 +76,106 @@ const decode = (payload: string) => {
 	return JSON.parse(data) as Data;
 };
 
-const restore = (data: Data) => {
-	debug('restore');
-
-	let failed = 0;
-
-	const far: {
-		createdAt: number;
-		tags: string[];
-	} = {
-		createdAt: Date.now(),
-		tags: [],
-	};
-
-	for (const entry of data) {
-		try {
-			if (entry.tags) {
-				if (/href=['"]resources:\/\/.+['"]/.test(entry.tags)) {
-					const [, endpoint] = /href=['"]resources:\/\/(.+)['"]/.exec(entry.tags)!;
-					const url = 'https://' + getRandomAdShieldHost() + '/resources/' + endpoint + '?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJuYW1lIjoiIiwiZW1haWwiOiIiLCJleHAiOjE3MTE3OTAwNTIsImlhdCI6MTcxMTcwMzY1Mn0.27MjdPtrJN6BA7y2TWNPypwO_ipROd-bCk0eq4LFzTQ';
-
-					void (async () => {
-						const response = await fetch(url);
-						const text = await response.text();
-
-						if (!text) {
-							return;
-						}
-
-						far.tags.push(`<style>${text}</style>`);
-
-						// @ts-expect-error asdf-protected
-						localStorage.setItem('asdf-protected-far', JSON.stringify(far), secret);
-					})();
-
-					entry.tags = `<link rel="stylesheet" href="${url}">`;
-				}
-
-				document.head.insertAdjacentHTML('beforeend', entry.tags);
-			}
-		} catch (error) {
-			debug('restore error=', error);
-
-			failed++;
-		}
-	}
-
-	debug(`restore total=${data.length} failed=${failed}`);
-};
-
 const extract = async () => {
-	let source: {
+	const sources: Array<{
 		script: string;
 		data: string;
-	} | undefined;
+	}> = [];
 
 	const pick = () => {
-		const target: HTMLScriptElement = document.querySelector('script[data]:not([data=""])')!;
+		const targets: NodeListOf<HTMLScriptElement> = document.querySelectorAll('script[data]:not([data=""]),script[wp-data]:not([wp-data=""])')!;
 
-		if (target) {
+		for (const target of targets) {
 			const script = target.getAttribute('src');
 			const data = target.getAttribute('data');
 
 			if (script && data) {
-				source = {
+				sources.push({
 					script,
 					data,
-				};
+				});
 			}
 		}
 	};
 
 	pick();
 
-	if (!source) {
+	if (sources.length === 0) {
 		await documentReady(document);
 
 		pick();
 	}
 
-	if (!source) {
-		throw new Error('DEFUSER_SHORTWAVE_TARGET_NOT_FOUND');
+	if (sources.length === 0) {
+		throw new Error('DEFUSER_ZTINYWAVE_TARGET_NOT_FOUND');
 	}
 
-	return decode(source.data);
+	return sources;
 };
 
 export const tinywave = async () => {
-	try {
-		// @ts-expect-error asdf-protected
-		const resource = localStorage.getItem('asdf-protected-far', secret);
+	const isCachedEntitiesPassed = await tryCachedEntities()
+		.catch((error: Error) => {
+			debug('Failed to initialise cached entities', error);
 
-		if (resource) {
-			const data = JSON.parse(resource) as {createdAt: number; tags: string[]};
+			return false;
+		});
 
-			if (JSON.stringify(data.tags) !== '[""]' && Date.now() - data.createdAt < 1000 * 60 * 60 * 24 * 30) {
-				debug('far loaded', data);
-
-				for (const tag of data.tags) {
-					document.head.insertAdjacentHTML('beforeend', tag);
-				}
-
-				return;
-			}
-
-			debug('far expired');
-		}
-	} catch (e) {
-		debug('failed to initialise far', e);
+	if (isCachedEntitiesPassed) {
+		return;
 	}
 
-	const payload = await extract();
+	const entities: Entity[] = [];
 
-	debug('payload', payload);
+	const sources = await extract();
+	const sourcesResolves = sources.map(async source => {
+		debug('source', source);
 
-	restore(payload);
+		const payload = decode(source.data);
+
+		debug('payload', payload);
+
+		const publicEntities: Entity[] = [];
+		const privateEntities: Entity[] = [];
+
+		for (const item of payload) {
+			if (item.tags) {
+				if (item.tags.includes('resources://')) {
+					privateEntities.push({
+						type: EntityTypes.Head,
+						html: item.tags,
+					});
+				} else {
+					publicEntities.push({
+						type: EntityTypes.Head,
+						html: item.tags,
+					});
+				}
+			}
+		}
+
+		void insertEntities(publicEntities);
+
+		const token = await getResourceToken(source.script)
+			.catch(e => {
+				debug('DEFUSER_ZTINYWAVE_RESOURCE_TOKEN_NOT_FOUND', e);
+
+				return predefinedToken;
+			});
+
+		for (const entity of privateEntities) {
+			if (entity.type === EntityTypes.Head) {
+				// eslint-disable-next-line no-await-in-loop
+				entity.html = await resolveResourceUrls(entity.html, token);
+			}
+		}
+
+		void insertEntities(privateEntities);
+
+		entities.push(...publicEntities, ...privateEntities);
+	});
+
+	debug('sources resolves', await Promise.allSettled(sourcesResolves));
+
+	putCachedEntities(entities);
 };

@@ -18,7 +18,7 @@ export const protectFunction = <F extends (...args: any[]) => any>(f: F, name = 
 			if (isAdShieldCall()) {
 				debug('- apply name=' + name, 'args=', argArray, 'stack=', generateCallStack());
 
-				return false;
+				throw new Error();
 			}
 
 			if (config.debug) {
@@ -30,12 +30,12 @@ export const protectFunction = <F extends (...args: any[]) => any>(f: F, name = 
 		setPrototypeOf(target, v) {
 			debug('- setPrototypeOf name=' + name, 'v=', v, 'stack=', generateCallStack());
 
-			return false;
+			throw new Error();
 		},
 	});
 };
 
-export const protectFunctionWithArguments = <F extends (...args: any[]) => any>(f: F, name = f.name) => {
+export const protectFunctionWithArguments = <F extends (...args: any[]) => any>(f: F, name = f.name, checkOutput = false) => {
 	debug('creating protected function', name);
 
 	return new Proxy(f, {
@@ -46,7 +46,7 @@ export const protectFunctionWithArguments = <F extends (...args: any[]) => any>(
 						if (arg.includes(domain)) {
 							debug('- apply name=' + name, 'args=', argArray, 'stack=', generateCallStack());
 
-							return false;
+							throw new Error();
 						}
 					}
 				}
@@ -55,19 +55,33 @@ export const protectFunctionWithArguments = <F extends (...args: any[]) => any>(
 			if (isAdShieldCall()) {
 				debug('- apply name=' + name, 'args=', argArray, 'stack=', generateCallStack());
 
-				return false;
+				throw new Error();
 			}
 
 			if (config.debug) {
 				debug('+ apply name=' + name, 'args=', argArray, 'stack=', generateCallStack());
 			}
 
-			return Reflect.apply(target, thisArg, argArray) as unknown;
+			const result = Reflect.apply(target, thisArg, argArray) as unknown;
+
+			if (!checkOutput) {
+				return result;
+			}
+
+			for (const domain of adshieldKeywords) {
+				if ((result as string).includes(domain)) {
+					debug('- ~apply name=' + name, 'args=', argArray, 'stack=', generateCallStack());
+
+					throw new Error();
+				}
+			}
+
+			return result;
 		},
 		setPrototypeOf(target, v) {
 			debug('- setPrototypeOf name=' + name, 'v=', v, 'stack=', generateCallStack());
 
-			return false;
+			throw new Error();
 		},
 	});
 };
@@ -88,7 +102,7 @@ export const protectDescriptors = <T extends ArbitaryObject, K extends keyof T>(
 				) {
 					debug('- apply name=Object.defineProperty', 'args=', argArray, 'stack=', generateCallStack());
 
-					return false;
+					throw new Error();
 				}
 
 				if (config.debug) {
@@ -106,14 +120,14 @@ export const protectDescriptors = <T extends ArbitaryObject, K extends keyof T>(
 					if (protectedDescriptors.has(targetObject[targetProperty])) {
 						debug('- apply name=Object.defineProperty', 'args=', argArray, 'stack=', generateCallStack());
 
-						return false;
+						throw new Error();
 					}
 				}
 
 				if (isAdShieldCall()) {
 					debug('- apply name=Object.defineProperty', 'args=', argArray, 'stack=', generateCallStack());
 
-					return false;
+					throw new Error();
 				}
 
 				if (config.debug) {

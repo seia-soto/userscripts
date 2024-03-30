@@ -4,7 +4,7 @@ import {protectStorageApis} from './utils/storage.js';
 
 const hook = () => {
 	// Pollusions
-	window.Error = protectFunction(window.Error, 'Error');
+	protectDescriptors(window, 'Error', protectFunctionWithArguments(window.Error));
 
 	// Messaging
 	protectDescriptors(window.EventTarget.prototype, 'addEventListener', protectFunctionWithArguments(EventTarget.prototype.addEventListener));
@@ -27,7 +27,7 @@ const hook = () => {
 	protectDescriptors(window.document, 'createElementNS', protectFunctionWithArguments(document.createElementNS));
 	protectDescriptors(window, 'alert', protectFunctionWithArguments(alert));
 	protectDescriptors(window, 'confirm', protectFunctionWithArguments(confirm));
-	protectDescriptors(window, 'atob', protectFunctionWithArguments(atob));
+	protectDescriptors(window, 'atob', protectFunctionWithArguments(atob, atob.name, true));
 	protectDescriptors(window, 'decodeURI', protectFunctionWithArguments(decodeURI));
 	protectDescriptors(window, 'decodeURIComponent', protectFunctionWithArguments(decodeURIComponent));
 

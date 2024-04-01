@@ -10,76 +10,45 @@ const debug = createDebug('secret');
 
 export const secret = (Date.now() * Math.random()).toString(36);
 
-export const protectFunction = <F extends (...args: any[]) => any>(f: F, name = f.name) => {
+export type ProtectedFunctionCreationOptions = {
+	arguments: boolean;
+}
+
+const pprintCall = (name: string, wasBlocked: boolean, v: unknown) => debug(wasBlocked ? '-' : '+', 'name=' + name, 'v=', v, 'stack=', generateCallStack());
+
+export const protectFunction = <F extends (...args: any[]) => any>(f: F, name = f.name, options: Partial<ProtectedFunctionCreationOptions> = {}) => {
 	debug('creating protected function', name);
 
 	return new Proxy(f, {
 		apply(target, thisArg, argArray) {
 			if (isAdShieldCall()) {
-				debug('- apply name=' + name, 'args=', argArray, 'stack=', generateCallStack());
+				pprintCall(name, true, argArray);
 
 				throw new Error();
 			}
 
-			if (config.debug) {
-				debug('+ apply name=' + name, 'args=', argArray, 'stack=', generateCallStack());
-			}
+			if (options.arguments) {
+				for (const arg of argArray) {
+					if (typeof arg === 'string') {
+						for (const domain of adshieldKeywords) {
+							if (arg.includes(domain)) {
+								pprintCall(name, true, argArray);
 
-			return Reflect.apply(target, thisArg, argArray) as unknown;
-		},
-		setPrototypeOf(target, v) {
-			debug('- setPrototypeOf name=' + name, 'v=', v, 'stack=', generateCallStack());
-
-			throw new Error();
-		},
-	});
-};
-
-export const protectFunctionWithArguments = <F extends (...args: any[]) => any>(f: F, name = f.name, checkOutput = false) => {
-	debug('creating protected function', name);
-
-	return new Proxy(f, {
-		apply(target, thisArg, argArray) {
-			for (const arg of argArray) {
-				if (typeof arg === 'string') {
-					for (const domain of adshieldKeywords) {
-						if (arg.includes(domain)) {
-							debug('- apply name=' + name, 'args=', argArray, 'stack=', generateCallStack());
-
-							throw new Error();
+								throw new Error();
+							}
 						}
 					}
 				}
 			}
 
-			if (isAdShieldCall()) {
-				debug('- apply name=' + name, 'args=', argArray, 'stack=', generateCallStack());
-
-				throw new Error();
-			}
-
 			if (config.debug) {
-				debug('+ apply name=' + name, 'args=', argArray, 'stack=', generateCallStack());
+				pprintCall(name, false, argArray);
 			}
 
-			const result = Reflect.apply(target, thisArg, argArray) as unknown;
-
-			if (!checkOutput) {
-				return result;
-			}
-
-			for (const domain of adshieldKeywords) {
-				if ((result as string).includes(domain)) {
-					debug('- ~apply name=' + name, 'args=', argArray, 'stack=', generateCallStack());
-
-					throw new Error();
-				}
-			}
-
-			return result;
+			return Reflect.apply(target, thisArg, argArray) as unknown;
 		},
 		setPrototypeOf(target, v) {
-			debug('- setPrototypeOf name=' + name, 'v=', v, 'stack=', generateCallStack());
+			pprintCall(name, true, v);
 
 			throw new Error();
 		},
@@ -92,6 +61,8 @@ export const protectDescriptors = <T extends ArbitaryObject, K extends keyof T>(
 	if (protectedDescriptors.size === 0) {
 		debug('! creating protected object property descriptor handlers');
 
+		const definePropertyNames = ['defineProperty', 'defineProperties'] as const
+
 		const defineProperty = new Proxy(Object.defineProperty, {
 			apply(target, thisArg, argArray) {
 				const [targetObject, targetProperty] = argArray as [T, K, PropertyDescriptor];
@@ -100,13 +71,13 @@ export const protectDescriptors = <T extends ArbitaryObject, K extends keyof T>(
 					protectedDescriptors.has(targetObject[targetProperty])
 					|| isAdShieldCall()
 				) {
-					debug('- apply name=Object.defineProperty', 'args=', argArray, 'stack=', generateCallStack());
+					pprintCall(definePropertyNames[0], true, argArray);
 
 					throw new Error();
 				}
 
 				if (config.debug) {
-					debug('+ apply name=Object.defineProperty', 'args=', argArray, 'stack=', generateCallStack());
+					pprintCall(definePropertyNames[0], false, argArray);
 				}
 
 				return Reflect.apply(target, thisArg, argArray) as unknown;
@@ -114,24 +85,24 @@ export const protectDescriptors = <T extends ArbitaryObject, K extends keyof T>(
 		});
 		const defineProperties = new Proxy(Object.defineProperties, {
 			apply(target, thisArg, argArray) {
+				if (isAdShieldCall()) {
+					pprintCall(definePropertyNames[1], true, argArray);
+
+					throw new Error();
+				}
+
 				const [targetObject, targetProperties] = argArray as [T, Record<K, PropertyDescriptor>];
 
 				for (const targetProperty of Object.keys(targetProperties) as K[]) {
 					if (protectedDescriptors.has(targetObject[targetProperty])) {
-						debug('- apply name=Object.defineProperty', 'args=', argArray, 'stack=', generateCallStack());
+						pprintCall(definePropertyNames[1], true, argArray);
 
 						throw new Error();
 					}
 				}
 
-				if (isAdShieldCall()) {
-					debug('- apply name=Object.defineProperty', 'args=', argArray, 'stack=', generateCallStack());
-
-					throw new Error();
-				}
-
 				if (config.debug) {
-					debug('+ apply name=Object.defineProperty', 'args=', argArray, 'stack=', generateCallStack());
+					pprintCall(definePropertyNames[1], false, argArray);
 				}
 
 				return Reflect.apply(target, thisArg, argArray) as unknown;

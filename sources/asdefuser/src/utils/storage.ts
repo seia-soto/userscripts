@@ -7,26 +7,6 @@ import {protectDescriptors, secret} from './secret.js';
 const debug = createDebug('storage');
 
 export const protectStorageApis = () => {
-	protectDescriptors(window.Storage.prototype, 'getItem', new Proxy(Storage.prototype.getItem, {
-		apply(target, thisArg, argArray) {
-			const [key, givenSecret] = argArray as [string, string];
-
-			if (
-				isAdShieldCall()
-        || (key.startsWith('asdefuser') && givenSecret !== secret)
-			) {
-				debug('- apply name=Storage.prototype.getItem', 'args=', argArray, 'stack=', generateCallStack());
-
-				return false;
-			}
-
-			if (config.debug) {
-				debug('+ apply name=Storage.prototype.getItem', 'args=', argArray, 'stack=', generateCallStack());
-			}
-
-			return Reflect.apply(target, thisArg, [key]);
-		},
-	}));
 	protectDescriptors(window.Storage.prototype, 'setItem', new Proxy(Storage.prototype.setItem, {
 		apply(target, thisArg, argArray) {
 			const [key, value, givenSecret] = argArray as [string, string, string];

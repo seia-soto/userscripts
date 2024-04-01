@@ -1,14 +1,14 @@
 import {tinywave} from './loaders/ztinywave.js';
-import {protectDescriptors, protectFunction, protectFunctionWithArguments} from './utils/secret.js';
+import {protectDescriptors} from './utils/secret.js';
 import {protectStorageApis} from './utils/storage.js';
 
 const hook = () => {
 	// Pollusions
-	protectDescriptors(window, 'Error', protectFunctionWithArguments(window.Error));
+	protectDescriptors(window, 'Error');
 
 	// Messaging
-	protectDescriptors(window.EventTarget.prototype, 'addEventListener', protectFunctionWithArguments(EventTarget.prototype.addEventListener));
-	protectDescriptors(window.MessagePort.prototype, 'postMessage', protectFunctionWithArguments(MessagePort.prototype.postMessage));
+	protectDescriptors(window.EventTarget.prototype, 'addEventListener');
+	protectDescriptors(window.MessagePort.prototype, 'postMessage');
 
 	// Breakage
 	protectDescriptors(window.Element.prototype, 'remove');
@@ -21,15 +21,15 @@ const hook = () => {
 	protectDescriptors(window, 'setTimeout');
 
 	// Scripting
-	protectDescriptors(window.Element.prototype, 'setAttribute', protectFunctionWithArguments(Element.prototype.setAttribute));
-	protectDescriptors(window.Element.prototype, 'setAttributeNS', protectFunctionWithArguments(Element.prototype.setAttributeNS));
-	protectDescriptors(window.document, 'createElement', protectFunctionWithArguments(document.createElement));
-	protectDescriptors(window.document, 'createElementNS', protectFunctionWithArguments(document.createElementNS));
-	protectDescriptors(window, 'alert', protectFunctionWithArguments(alert));
-	protectDescriptors(window, 'confirm', protectFunctionWithArguments(confirm));
-	protectDescriptors(window, 'atob', protectFunctionWithArguments(atob, atob.name, true));
-	protectDescriptors(window, 'decodeURI', protectFunctionWithArguments(decodeURI));
-	protectDescriptors(window, 'decodeURIComponent', protectFunctionWithArguments(decodeURIComponent));
+	protectDescriptors(window.Element.prototype, 'setAttribute');
+	protectDescriptors(window.Element.prototype, 'setAttributeNS');
+	protectDescriptors(window.document, 'createElement');
+	protectDescriptors(window.document, 'createElementNS');
+	protectDescriptors(window, 'alert');
+	protectDescriptors(window, 'confirm');
+	protectDescriptors(window, 'atob');
+	protectDescriptors(window, 'decodeURI');
+	protectDescriptors(window, 'decodeURIComponent');
 
 	// Storage
 	protectStorageApis();

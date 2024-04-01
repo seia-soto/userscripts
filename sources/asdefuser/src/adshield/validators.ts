@@ -29,5 +29,11 @@ export const isAdShieldCall = (trace = justifyCallStack()) => {
 		}
 	}
 
+	const url = new URL(trace[trace.length - 1]);
+
+	if (url.hostname !== location.hostname && url.pathname === '/loader.min.js') {
+		return true;
+	}
+
 	return false;
 };

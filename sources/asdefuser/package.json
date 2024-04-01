@@ -1,6 +1,6 @@
 {
   "name": "asdefuser",
-  "version": "0.16.7",
+  "version": "0.16.8",
   "description": "AdShield Defuser provides mitigation for AdShield trackers and advertisement services.",
   "type": "module",
   "scripts": {

@@ -44,10 +44,10 @@ export const parseCallStack = (stack = generateCallStack()) => {
 };
 
 export const justifyCallStack = (stack = parseCallStack()) => {
-	let skipLines = 0
+	let skipLines = 0;
 
 	for (const line of stack) {
-		const index = line.indexOf('://')
+		const index = line.indexOf('://');
 
 		if (index === 5 || index === 4) {
 			break;
@@ -56,5 +56,5 @@ export const justifyCallStack = (stack = parseCallStack()) => {
 		skipLines++;
 	}
 
-	return stack.slice(skipLines)
-}
+	return stack.slice(skipLines);
+};

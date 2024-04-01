@@ -1,35 +1,35 @@
 import {tinywave} from './loaders/ztinywave.js';
-import {protectDescriptors} from './utils/secret.js';
+import {protectFunctionDescriptors} from './utils/secret.js';
 import {protectStorageApis} from './utils/storage.js';
 
 const hook = () => {
 	// Pollusions
-	protectDescriptors(window, 'Error');
+	protectFunctionDescriptors(window, 'Error');
 
 	// Messaging
-	protectDescriptors(window.EventTarget.prototype, 'addEventListener');
-	protectDescriptors(window.MessagePort.prototype, 'postMessage');
+	protectFunctionDescriptors(window.EventTarget.prototype, 'addEventListener');
+	protectFunctionDescriptors(window.MessagePort.prototype, 'postMessage');
 
 	// Breakage
-	protectDescriptors(window.Element.prototype, 'remove');
-	protectDescriptors(window.Element.prototype, 'removeChild');
-	protectDescriptors(window.Element.prototype, 'insertAdjacentElement');
-	protectDescriptors(window.Element.prototype, 'insertAdjacentHTML');
+	protectFunctionDescriptors(window.Element.prototype, 'remove');
+	protectFunctionDescriptors(window.Element.prototype, 'removeChild');
+	protectFunctionDescriptors(window.Element.prototype, 'insertAdjacentElement');
+	protectFunctionDescriptors(window.Element.prototype, 'insertAdjacentHTML');
 
 	// Timer
-	protectDescriptors(window, 'setInterval');
-	protectDescriptors(window, 'setTimeout');
+	protectFunctionDescriptors(window, 'setInterval');
+	protectFunctionDescriptors(window, 'setTimeout');
 
 	// Scripting
-	protectDescriptors(window.Element.prototype, 'setAttribute');
-	protectDescriptors(window.Element.prototype, 'setAttributeNS');
-	protectDescriptors(window.document, 'createElement');
-	protectDescriptors(window.document, 'createElementNS');
-	protectDescriptors(window, 'alert');
-	protectDescriptors(window, 'confirm');
-	protectDescriptors(window, 'atob');
-	protectDescriptors(window, 'decodeURI');
-	protectDescriptors(window, 'decodeURIComponent');
+	protectFunctionDescriptors(window.Element.prototype, 'setAttribute', {checkArguments: true});
+	protectFunctionDescriptors(window.Element.prototype, 'setAttributeNS', {checkArguments: true});
+	protectFunctionDescriptors(window.document, 'createElement');
+	protectFunctionDescriptors(window.document, 'createElementNS');
+	protectFunctionDescriptors(window, 'alert', {checkArguments: true});
+	protectFunctionDescriptors(window, 'confirm', {checkArguments: true});
+	protectFunctionDescriptors(window, 'atob');
+	protectFunctionDescriptors(window, 'decodeURI');
+	protectFunctionDescriptors(window, 'decodeURIComponent');
 
 	// Storage
 	protectStorageApis();
@@ -38,11 +38,11 @@ const hook = () => {
 const style = () => {
 	const selectors = [
 		'[class][style*="bottom: 0"][style*="justify-content: center"]',
-		'iframe[src*="error-report.com"]'
-	]
+		'iframe[src*="error-report.com"]',
+	];
 
-	document.head.insertAdjacentHTML('beforeend', `<style>${selectors.join(',')}{display:none !important}</style>`)
-}
+	document.head.insertAdjacentHTML('beforeend', `<style>${selectors.join(',')}{display:none !important}</style>`);
+};
 
 const bootstrap = () => {
 	hook();

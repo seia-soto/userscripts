@@ -3,110 +3,90 @@ import {adshieldKeywords, isAdShieldCall} from '../adshield/validators.js';
 import {generateCallStack} from './call-stack.js';
 import {createDebug} from './logger.js';
 
-// eslint-disable-next-line @typescript-eslint/semi, @typescript-eslint/ban-types
-type ArbitaryObject = object
+// eslint-disable-next-line @typescript-eslint/ban-types
+type ArbitaryObject = object;
+
+// eslint-disable-next-line @typescript-eslint/ban-types
+type Fomulate = ((...args: any[]) => any) & Function;
 
 const debug = createDebug('secret');
 
 export const secret = (Date.now() * Math.random()).toString(36);
 
-export type ProtectedFunctionCreationOptions = {
-	arguments: boolean;
-}
+export type ProtectedFunctionCreationOptions = Partial<{
+	name: string;
+	checkArguments: boolean;
+	checkArgumentFunctions: Array<(argArray: any[]) => boolean>;
+}>;
 
-const pprintCall = (name: string, wasBlocked: boolean, v: unknown) => debug(wasBlocked ? '-' : '+', 'name=' + name, 'v=', v, 'stack=', generateCallStack());
-
-export const protectFunction = <F extends (...args: any[]) => any>(f: F, name = f.name, options: Partial<ProtectedFunctionCreationOptions> = {}) => {
-	debug('creating protected function', name);
-
-	return new Proxy(f, {
-		apply(target, thisArg, argArray) {
-			if (isAdShieldCall()) {
-				pprintCall(name, true, argArray);
-
-				throw new Error();
-			}
-
-			if (options.arguments) {
-				for (const arg of argArray) {
-					if (typeof arg === 'string') {
-						for (const domain of adshieldKeywords) {
-							if (arg.includes(domain)) {
-								pprintCall(name, true, argArray);
-
-								throw new Error();
-							}
-						}
-					}
-				}
-			}
-
-			if (config.debug) {
-				pprintCall(name, false, argArray);
-			}
-
-			return Reflect.apply(target, thisArg, argArray) as unknown;
-		},
-		setPrototypeOf(target, v) {
-			pprintCall(name, true, v);
-
-			throw new Error();
-		},
-	});
+const pprintCall = (name?: string, wasBlocked?: boolean, v?: unknown) => {
+	debug(wasBlocked ? '-' : '+', 'name=' + name, 'v=', v, 'stack=', generateCallStack());
 };
 
-export const protectedDescriptors = new Set<unknown>();
+export const protectFunction = <F extends Fomulate>(f: F, options: ProtectedFunctionCreationOptions) => new Proxy(f, {
+	apply(target, thisArg, argArray) {
+		if (isAdShieldCall()) {
+			pprintCall(options.name, true, argArray);
 
-export const protectDescriptors = <T extends ArbitaryObject, K extends keyof T>(o: T, property: K, newProperty?: T[K]) => {
-	if (protectedDescriptors.size === 0) {
-		debug('! creating protected object property descriptor handlers');
+			throw new Error();
+		}
 
-		const definePropertyNames = ['defineProperty', 'defineProperties'] as const
-
-		const defineProperty = new Proxy(Object.defineProperty, {
-			apply(target, thisArg, argArray) {
-				const [targetObject, targetProperty] = argArray as [T, K, PropertyDescriptor];
-
-				if (
-					protectedDescriptors.has(targetObject[targetProperty])
-					|| isAdShieldCall()
-				) {
-					pprintCall(definePropertyNames[0], true, argArray);
-
-					throw new Error();
-				}
-
-				if (config.debug) {
-					pprintCall(definePropertyNames[0], false, argArray);
-				}
-
-				return Reflect.apply(target, thisArg, argArray) as unknown;
-			},
-		});
-		const defineProperties = new Proxy(Object.defineProperties, {
-			apply(target, thisArg, argArray) {
-				if (isAdShieldCall()) {
-					pprintCall(definePropertyNames[1], true, argArray);
-
-					throw new Error();
-				}
-
-				const [targetObject, targetProperties] = argArray as [T, Record<K, PropertyDescriptor>];
-
-				for (const targetProperty of Object.keys(targetProperties) as K[]) {
-					if (protectedDescriptors.has(targetObject[targetProperty])) {
-						pprintCall(definePropertyNames[1], true, argArray);
+		if (options.checkArguments) {
+			for (const arg of argArray.filter(arg => typeof arg === 'string') as string[]) {
+				for (const domain of adshieldKeywords) {
+					if (arg.includes(domain)) {
+						pprintCall(options.name, true, argArray);
 
 						throw new Error();
 					}
 				}
+			}
+		}
 
-				if (config.debug) {
-					pprintCall(definePropertyNames[1], false, argArray);
+		if (options.checkArgumentFunctions) {
+			for (const checkFunction of options.checkArgumentFunctions) {
+				if (!checkFunction(argArray)) {
+					pprintCall(options.name, true, argArray);
+
+					throw new Error();
 				}
+			}
+		}
 
-				return Reflect.apply(target, thisArg, argArray) as unknown;
-			},
+		if (config.debug) {
+			pprintCall(options.name, false, argArray);
+		}
+
+		return Reflect.apply(target, thisArg, argArray) as unknown;
+	},
+	setPrototypeOf(target, v) {
+		pprintCall(options.name, true, v);
+
+		throw new Error();
+	},
+});
+
+export const protectedDescriptors = new Set<unknown>();
+
+export const protectDescriptors = <T extends ArbitaryObject, K extends keyof T>(o: T, key: K, newProperty: T[K]) => {
+	if (protectedDescriptors.size === 0) {
+		const defineProperty = protectFunction(Object.defineProperty, {
+			checkArgumentFunctions: [
+				argArray => !protectedDescriptors.has(argArray[0][argArray[1]]),
+			],
+		});
+		const defineProperties = protectFunction(Object.defineProperties, {
+			checkArgumentFunctions: [
+				argArray => {
+					for (const targetProperty of Object.keys(argArray[1] as ArbitaryObject) as K[]) {
+						if (protectedDescriptors.has(argArray[0][targetProperty])) {
+							return false;
+						}
+					}
+
+					return true;
+				},
+			],
 		});
 
 		protectedDescriptors.add(defineProperties);
@@ -131,13 +111,27 @@ export const protectDescriptors = <T extends ArbitaryObject, K extends keyof T>(
 		});
 	}
 
-	if (newProperty === undefined && typeof o[property] === 'function') {
-		newProperty = protectFunction(o[property] as (...args: unknown[]) => unknown) as T[K];
-	}
-
-	Object.defineProperty(o, property, {
+	Object.defineProperty(o, key, {
 		value: newProperty,
 	});
 
 	protectedDescriptors.add(newProperty);
+};
+
+type ExtractFunctionPropertyNames<T extends ArbitaryObject> = {
+	[P in keyof T]: T[P] extends Fomulate ? P : never
+}[keyof T];
+
+export const protectFunctionDescriptors = <T extends ArbitaryObject, K extends ExtractFunctionPropertyNames<T>>(o: T, key: K, options?: ProtectedFunctionCreationOptions) => {
+	const property = o[key] as T[K] & Fomulate;
+
+	if (options === undefined) {
+		options = {};
+	}
+
+	if (options.name === undefined) {
+		options.name = property.name;
+	}
+
+	protectDescriptors(o, key, protectFunction(property, options) as T[K]);
 };

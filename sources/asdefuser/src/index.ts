@@ -27,26 +27,19 @@ const hook = () => {
 	protectFunctionDescriptors(window.document, 'createElementNS');
 	protectFunctionDescriptors(window, 'alert', {checkArguments: true});
 	protectFunctionDescriptors(window, 'confirm', {checkArguments: true});
-	protectFunctionDescriptors(window, 'atob');
+	protectFunctionDescriptors(window, 'atob', {checkOutputs: true});
 	protectFunctionDescriptors(window, 'decodeURI');
 	protectFunctionDescriptors(window, 'decodeURIComponent');
 
 	// Storage
 	protectStorageApis();
-};
 
-const style = () => {
-	const selectors = [
-		'[class][style*="bottom: 0"][style*="justify-content: center"]',
-		'iframe[src*="error-report.com"]',
-	];
-
-	document.head.insertAdjacentHTML('beforeend', `<style>${selectors.join(',')}{display:none !important}</style>`);
+	// Networking
+	protectFunctionDescriptors(window, 'fetch', {checkArguments: true});
 };
 
 const bootstrap = () => {
 	hook();
-	style();
 
 	void tinywave();
 };

@@ -1,7 +1,8 @@
-import {config} from '../config.js';
 import {adshieldKeywords, isAdShieldCall} from '../adshield/validators.js';
+import {config} from '../config.js';
 import {generateCallStack} from './call-stack.js';
 import {createDebug} from './logger.js';
+import {hasSubstringSetsInString} from './string.js';
 
 // eslint-disable-next-line @typescript-eslint/ban-types
 type ArbitaryObject = object;
@@ -16,6 +17,7 @@ export const secret = (Date.now() * Math.random()).toString(36);
 export type ProtectedFunctionCreationOptions = Partial<{
 	name: string;
 	checkArguments: boolean;
+	checkOutputs: boolean;
 	checkArgumentFunctions: Array<(argArray: any[]) => boolean>;
 }>;
 
@@ -33,12 +35,10 @@ export const protectFunction = <F extends Fomulate>(f: F, options: ProtectedFunc
 
 		if (options.checkArguments) {
 			for (const arg of argArray.filter(arg => typeof arg === 'string') as string[]) {
-				for (const domain of adshieldKeywords) {
-					if (arg.includes(domain)) {
-						pprintCall(options.name, true, argArray);
+				if (hasSubstringSetsInString(arg, adshieldKeywords)) {
+					pprintCall(options.name, true, argArray);
 
-						throw new Error();
-					}
+					throw new Error();
 				}
 			}
 		}
@@ -50,6 +50,16 @@ export const protectFunction = <F extends Fomulate>(f: F, options: ProtectedFunc
 
 					throw new Error();
 				}
+			}
+		}
+
+		if (options.checkOutputs) {
+			const output = Reflect.apply(target, thisArg, argArray) as string;
+
+			if (hasSubstringSetsInString(output.toLowerCase(), adshieldKeywords)) {
+				pprintCall(options.name, true, argArray);
+
+				throw new Error();
 			}
 		}
 

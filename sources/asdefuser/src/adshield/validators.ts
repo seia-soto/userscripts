@@ -1,4 +1,5 @@
 import {justifyCallStack} from '../utils/call-stack.js';
+import {hasSubstringSetsInString} from '../utils/string.js';
 
 export const adshieldDomains = [
 	'css-load.com',
@@ -10,7 +11,8 @@ export const adshieldDomains = [
 
 export const adshieldKeywords = [
 	...adshieldDomains,
-	'blocking',
+	'failed to load website',
+	'blocking software',
 ];
 
 const adshieldDomainSize = adshieldDomains.length;
@@ -23,10 +25,8 @@ export const isAdShieldCall = (trace = justifyCallStack()) => {
 		return false;
 	}
 
-	for (const domain of adshieldDomains) {
-		if (trace[trace.length - 1].includes(domain)) {
-			return true;
-		}
+	if (hasSubstringSetsInString(trace[trace.length - 1], adshieldDomains)) {
+		return true;
 	}
 
 	const url = new URL(trace[trace.length - 1]);

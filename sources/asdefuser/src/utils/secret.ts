@@ -27,18 +27,20 @@ const pprintCall = (name?: string, wasBlocked?: boolean, v?: unknown) => {
 
 export const protectFunction = <F extends Fomulate>(f: F, options: ProtectedFunctionCreationOptions) => new Proxy(f, {
 	apply(target, thisArg, argArray) {
-		if (isAdShieldCall()) {
+		const e = () => {
 			pprintCall(options.name, true, argArray);
 
 			throw new Error();
+		};
+
+		if (isAdShieldCall()) {
+			e();
 		}
 
 		if (options.checkArguments) {
 			for (const arg of argArray.filter(arg => typeof arg === 'string') as string[]) {
 				if (hasSubstringSetsInString(arg, adshieldKeywords)) {
-					pprintCall(options.name, true, argArray);
-
-					throw new Error();
+					e();
 				}
 			}
 		}
@@ -46,9 +48,7 @@ export const protectFunction = <F extends Fomulate>(f: F, options: ProtectedFunc
 		if (options.checkArgumentFunctions) {
 			for (const checkFunction of options.checkArgumentFunctions) {
 				if (!checkFunction(argArray)) {
-					pprintCall(options.name, true, argArray);
-
-					throw new Error();
+					e();
 				}
 			}
 		}
@@ -57,9 +57,7 @@ export const protectFunction = <F extends Fomulate>(f: F, options: ProtectedFunc
 			const output = Reflect.apply(target, thisArg, argArray) as string;
 
 			if (hasSubstringSetsInString(output.toLowerCase(), adshieldKeywords)) {
-				pprintCall(options.name, true, argArray);
-
-				throw new Error();
+				e();
 			}
 		}
 

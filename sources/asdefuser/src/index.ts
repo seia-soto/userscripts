@@ -1,6 +1,10 @@
+import {adshieldKeywords} from './adshield/validators.js';
 import {tinywave} from './loaders/ztinywave.js';
+import {documentReady} from './utils/frame.js';
+import {createDebug} from './utils/logger.js';
 import {protectFunctionDescriptors} from './utils/secret.js';
 import {protectStorageApis} from './utils/storage.js';
+import {hasSubstringSetsInString} from './utils/string.js';
 
 const hook = () => {
 	// Pollusions
@@ -38,10 +42,34 @@ const hook = () => {
 	protectFunctionDescriptors(window, 'fetch', {checkArguments: true});
 };
 
+const observe = () => {
+	const debug = createDebug('observe');
+	const observer = new MutationObserver(mutations => {
+		for (const mutation of mutations) {
+			for (const addedNode of mutation.addedNodes) {
+				if (addedNode instanceof HTMLElement && hasSubstringSetsInString(addedNode.innerHTML, adshieldKeywords)) {
+					addedNode.remove();
+
+					debug(addedNode);
+				}
+			}
+		}
+	});
+
+	observer.observe(document.body, {
+		subtree: true,
+		childList: true,
+	});
+};
+
 const bootstrap = () => {
 	hook();
-
 	void tinywave();
+
+	void documentReady()
+		.then(() => {
+			observe();
+		});
 };
 
 bootstrap();

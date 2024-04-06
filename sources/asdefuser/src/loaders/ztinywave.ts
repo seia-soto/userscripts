@@ -173,6 +173,8 @@ export const tinywave = async () => {
 		void insertEntities(privateEntities);
 
 		entities.push(...publicEntities, ...privateEntities);
+
+		return entities;
 	});
 
 	debug('sources resolves', await Promise.allSettled(sourcesResolves));

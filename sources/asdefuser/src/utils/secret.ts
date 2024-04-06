@@ -1,6 +1,6 @@
 import {adshieldKeywords, isAdShieldCall} from '../adshield/validators.js';
 import {config} from '../config.js';
-import {generateCallStack} from './call-stack.js';
+import {generateCallStack, justifyCallStack} from './call-stack.js';
 import {createDebug} from './logger.js';
 import {hasSubstringSetsInString} from './string.js';
 
@@ -33,7 +33,14 @@ export const protectFunction = <F extends Fomulate>(f: F, options: ProtectedFunc
 			throw new Error();
 		};
 
-		if (isAdShieldCall()) {
+		const justifiedCallStack = justifyCallStack();
+		const lastLine = justifiedCallStack[justifiedCallStack.length - 1];
+
+		if (lastLine === undefined || lastLine.startsWith('chrome') || lastLine.startsWith('webkit') || lastLine.startsWith('moz')) {
+			return false;
+		}
+
+		if (isAdShieldCall(lastLine)) {
 			e();
 		}
 
@@ -97,24 +104,18 @@ export const protectDescriptors = <T extends ArbitaryObject, K extends keyof T>(
 			],
 		});
 
-		protectedDescriptors.add(defineProperties);
 		protectedDescriptors.add(defineProperty);
+		protectedDescriptors.add(defineProperties);
 
 		Object.defineProperty(window.Object, 'defineProperty', {
-			get() {
-				return defineProperty;
-			},
+			value: defineProperty,
 		});
 		Object.defineProperties(window.Object, {
 			defineProperty: {
-				get() {
-					return defineProperty;
-				},
+				value: defineProperty,
 			},
 			defineProperties: {
-				get() {
-					return defineProperties;
-				},
+				value: defineProperties,
 			},
 		});
 	}

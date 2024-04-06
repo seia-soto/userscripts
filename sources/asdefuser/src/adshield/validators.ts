@@ -1,4 +1,3 @@
-import {justifyCallStack} from '../utils/call-stack.js';
 import {hasSubstringSetsInString} from '../utils/string.js';
 
 export const adshieldDomains = [
@@ -20,16 +19,12 @@ const adshieldDomainSize = adshieldDomains.length;
 // eslint-disable-next-line no-bitwise
 export const getRandomAdShieldHost = () => adshieldDomains[(Math.random() * adshieldDomainSize) >>> 0];
 
-export const isAdShieldCall = (trace = justifyCallStack()) => {
-	if (trace.length === 0) {
-		return false;
-	}
-
-	if (hasSubstringSetsInString(trace[trace.length - 1], adshieldDomains)) {
+export const isAdShieldCall = (lastLine: string) => {
+	if (hasSubstringSetsInString(lastLine, adshieldDomains)) {
 		return true;
 	}
 
-	const url = new URL(trace[trace.length - 1]);
+	const url = new URL(lastLine);
 
 	if (url.hostname !== location.hostname && url.pathname === '/loader.min.js') {
 		return true;

@@ -63,6 +63,18 @@ export const tryCachedEntities = async () => {
 		throw new Error('The cached entities are too old!');
 	}
 
+	const totalEntityLength = data.entities.reduce((state, entity) => {
+		if (entity.type === EntityTypes.Head) {
+			return state + entity.html.length;
+		}
+
+		return state;
+	}, 0);
+
+	if (!totalEntityLength) {
+		throw new Error('The cached entities has no content!');
+	}
+
 	debug('restoring cached entities data=', data);
 
 	await insertEntities(data.entities);

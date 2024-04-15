@@ -4,8 +4,9 @@
   "description": "",
   "type": "module",
   "scripts": {
-    "build": "pnpm bundle",
-    "bundle": "esbuild src/index.ts --bundle --define:global=window --banner:js=\"$(cat ./banner.txt)\" --target=es2018,chrome68,safari13,firefox88 --outfile=./out/dudefuser.user.js"
+    "build": "esbuild src/index.ts --bundle --define:global=window --target=es2018,chrome68,safari13,firefox88",
+    "bundle": "pnpm build --outfile=./out/dudefuser.js",
+    "compile": "pnpm build --banner:js=\"$(cat ./banner.txt)\" --outfile=./out/dudefuser.user.js"
   },
   "keywords": [],
   "author": "HoJeong Go <seia@outlook.kr>",

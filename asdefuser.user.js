@@ -1,33 +1,4 @@
-// ==UserScript==
-// @encoding utf-8
-// @name AdShield Defuser
-// @description AdShield Defuser provides mitigation for AdShield trackers and advertisement services.
-// @author HoJeong Go <seia@outlook.kr>
-// @version 0.16.10
-//
-// @grant none
-// @run-at document-start
-//
-// @match http://ygosu.com/*
-// @match https://ygosu.com/*
-// @match http://*.ygosu.com/*
-// @match https://*.ygosu.com/*
-// @match https://sportalkorea.com/*
-// @match https://*.sportalkorea.com/*
-// @match https://www.edaily.co.kr/*
-// @match http://genshinlab.com/*
-// @match https://genshinlab.com/*
-// @match https://loawa.com/*
-// @match https://www.dogdrip.net/*
-// @match https://honkailab.com/*
-// @match https://meeco.kr/*
-//
-// @namespace https://github.com/seia-soto/userscripts
-// @homepageURL https://github.com/seia-soto/userscripts
-// @supportURL https://github.com/seia-soto/userscripts
-// @updateURL https://seia-soto.github.io/userscripts/asdefuser.user.js
-// @downloadURL https://seia-soto.github.io/userscripts/asdefuser.user.js
-// ==/UserScript==
+// ==UserScript==\n// @encoding utf-8\n// @name AdShield Defuser\n// @description AdShield Defuser provides mitigation for AdShield trackers and advertisement services.\n// @author HoJeong Go <seia@outlook.kr>\n// @version 0.16.10\n//\n// @grant none\n// @run-at document-start\n//\n// @match http://ygosu.com/*\n// @match https://ygosu.com/*\n// @match http://*.ygosu.com/*\n// @match https://*.ygosu.com/*\n// @match https://sportalkorea.com/*\n// @match https://*.sportalkorea.com/*\n// @match https://www.edaily.co.kr/*\n// @match http://genshinlab.com/*\n// @match https://genshinlab.com/*\n// @match https://loawa.com/*\n// @match https://www.dogdrip.net/*\n// @match https://honkailab.com/*\n// @match https://meeco.kr/*\n//\n// @namespace https://github.com/seia-soto/userscripts\n// @homepageURL https://github.com/seia-soto/userscripts\n// @supportURL https://github.com/seia-soto/userscripts\n// @updateURL https://seia-soto.github.io/userscripts/asdefuser.user.js\n// @downloadURL https://seia-soto.github.io/userscripts/asdefuser.user.js\n// ==/UserScript==
 "use strict";(()=>{var l=(e,t)=>{for(let r of t)if(e.includes(r))return!0;return!1};var v=["css-load.com","07c225f3.online","content-loader.com","error-report.com","html-load.com"],m=[...v,"failed to load website","blocking software"],K=v.length,I=()=>v[Math.random()*K>>>0],S=e=>{if(l(e,v))return!0;let t=new URL(e);return t.hostname!==location.hostname&&t.pathname==="/loader.min.js"};var T=[{id:"fkad",input:"7z>g}{/W#`c[ZT&sI<2-haKXYn\no)xSFA",output:"niue8tmyacj3l91q65fxbwzrv7po2gk40",reserved1:115,reserved1Input:"1EHb.|u?p(qfPity'r6O%	w=]9BJRD;:8k",reserved1Output:"phm21v9cw4b73yglnfxotazsuj8qrk650i",reserved2:104,reserved2Input:'Qj^ NCUv54le"VMm_30GL',reserved2Output:"bixqrhwn9zjm54o12fe0s"},{id:"svmm",input:`maG;FT.e2cYzV:%i})g4bp-KUZy<wL
 _?`,output:"1nwsr7vk8fh0l3ut92jigqx6z45cpbmyo",reserved1:97,reserved1Input:'krBJtD(Qlv^>#[h{X19o&SEAM/n"O= 05P',reserved1Output:"36qz0mv9tne7kwra5i1ujx28oyfspcglh4",reserved2:101,reserved2Input:"|`	'Rqj6CNWH]I8sx7u3f",reserved2Output:"wegyjpzux38q2a9vmifot"},{id:"cokq",input:`(r%96jVK7{kP	gDhOcFs'1;M"IuQZ/yqA`,output:"izxsomqh3p8bvga49w7fy2tluc6e5n01r",reserved1:106,reserved1Input:"^zG[wm\nC`=8Bv><&]0:T L#px3Xli-n).4",reserved1Output:"p91tzx4ibshwf3qyen506ugo2mkv8lrjc7",reserved2:107,reserved2Input:"EYf?RN2a}WbU5eH_|StJo",reserved2Output:"sm8fkhrwa94y0eupj2nq1"},{id:"znbg",input:"(	EHC_;s/.WgNfVl z9MYhQ}Tj:JFUS)#",output:"o5hkm78up2yxwvzsj0at1bglr6ei43ncq",reserved1:102,reserved1Input:`KZi{^4<m"5'c%
 XLurypqA8[eIw-DR|kbB`,reserved1Output:"ou7ercvw9l01yghnfip685bzxqtak3sjm4",reserved2:57,reserved2Input:"=6a0G>POo37nv?x&1`]2t",reserved2Output:"crxmjf7yhgt6o3p8l09iv"},{id:"zmpc",input:`.Ip>szJ8EwahYM/v;yKc=f

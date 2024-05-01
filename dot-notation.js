@@ -1,120 +1,176 @@
+/**
+ * @fileoverview Rule to warn about using dot notation instead of square bracket notation when possible.
+ * @author Josh Perez
+ */
 "use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-const tsutils = __importStar(require("ts-api-utils"));
-const ts = __importStar(require("typescript"));
-const util_1 = require("../util");
-const getESLintCoreRule_1 = require("../util/getESLintCoreRule");
-const baseRule = (0, getESLintCoreRule_1.getESLintCoreRule)('dot-notation');
-exports.default = (0, util_1.createRule)({
-    name: 'dot-notation',
+
+//------------------------------------------------------------------------------
+// Requirements
+//------------------------------------------------------------------------------
+
+const astUtils = require("./utils/ast-utils");
+const keywords = require("./utils/keywords");
+
+//------------------------------------------------------------------------------
+// Rule Definition
+//------------------------------------------------------------------------------
+
+const validIdentifier = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/u;
+
+// `null` literal must be handled separately.
+const literalTypesToCheck = new Set(["string", "boolean"]);
+
+/** @type {import('../shared/types').Rule} */
+module.exports = {
     meta: {
-        type: 'suggestion',
+        type: "suggestion",
+
         docs: {
-            description: 'Enforce dot notation whenever possible',
-            recommended: 'stylistic',
-            extendsBaseRule: true,
-            requiresTypeChecking: true,
+            description: "Enforce dot notation whenever possible",
+            recommended: false,
+            url: "https://eslint.org/docs/latest/rules/dot-notation"
         },
+
         schema: [
             {
-                type: 'object',
+                type: "object",
                 properties: {
                     allowKeywords: {
-                        type: 'boolean',
-                        default: true,
+                        type: "boolean",
+                        default: true
                     },
                     allowPattern: {
-                        type: 'string',
-                        default: '',
-                    },
-                    allowPrivateClassPropertyAccess: {
-                        type: 'boolean',
-                        default: false,
-                    },
-                    allowProtectedClassPropertyAccess: {
-                        type: 'boolean',
-                        default: false,
-                    },
-                    allowIndexSignaturePropertyAccess: {
-                        type: 'boolean',
-                        default: false,
-                    },
-                },
-                additionalProperties: false,
-            },
-        ],
-        fixable: baseRule.meta.fixable,
-        hasSuggestions: baseRule.meta.hasSuggestions,
-        messages: baseRule.meta.messages,
-    },
-    defaultOptions: [
-        {
-            allowPrivateClassPropertyAccess: false,
-            allowProtectedClassPropertyAccess: false,
-            allowIndexSignaturePropertyAccess: false,
-            allowKeywords: true,
-            allowPattern: '',
-        },
-    ],
-    create(context, [options]) {
-        const rules = baseRule.create(context);
-        const services = (0, util_1.getParserServices)(context);
-        const allowPrivateClassPropertyAccess = options.allowPrivateClassPropertyAccess;
-        const allowProtectedClassPropertyAccess = options.allowProtectedClassPropertyAccess;
-        const allowIndexSignaturePropertyAccess = (options.allowIndexSignaturePropertyAccess ?? false) ||
-            tsutils.isCompilerOptionEnabled(services.program.getCompilerOptions(), 'noPropertyAccessFromIndexSignature');
-        return {
-            MemberExpression(node) {
-                if ((allowPrivateClassPropertyAccess ||
-                    allowProtectedClassPropertyAccess ||
-                    allowIndexSignaturePropertyAccess) &&
-                    node.computed) {
-                    // for perf reasons - only fetch symbols if we have to
-                    const propertySymbol = services.getSymbolAtLocation(node.property);
-                    const modifierKind = (0, util_1.getModifiers)(propertySymbol?.getDeclarations()?.[0])?.[0].kind;
-                    if ((allowPrivateClassPropertyAccess &&
-                        modifierKind === ts.SyntaxKind.PrivateKeyword) ||
-                        (allowProtectedClassPropertyAccess &&
-                            modifierKind === ts.SyntaxKind.ProtectedKeyword)) {
-                        return;
+                        type: "string",
+                        default: ""
                     }
-                    if (propertySymbol === undefined &&
-                        allowIndexSignaturePropertyAccess) {
-                        const objectType = services.getTypeAtLocation(node.object);
-                        const indexType = objectType
-                            .getNonNullableType()
-                            .getStringIndexType();
-                        if (indexType !== undefined) {
+                },
+                additionalProperties: false
+            }
+        ],
+
+        fixable: "code",
+
+        messages: {
+            useDot: "[{{key}}] is better written in dot notation.",
+            useBrackets: ".{{key}} is a syntax error."
+        }
+    },
+
+    create(context) {
+        const options = context.options[0] || {};
+        const allowKeywords = options.allowKeywords === void 0 || options.allowKeywords;
+        const sourceCode = context.sourceCode;
+
+        let allowPattern;
+
+        if (options.allowPattern) {
+            allowPattern = new RegExp(options.allowPattern, "u");
+        }
+
+        /**
+         * Check if the property is valid dot notation
+         * @param {ASTNode} node The dot notation node
+         * @param {string} value Value which is to be checked
+         * @returns {void}
+         */
+        function checkComputedProperty(node, value) {
+            if (
+                validIdentifier.test(value) &&
+                (allowKeywords || !keywords.includes(String(value))) &&
+                !(allowPattern && allowPattern.test(value))
+            ) {
+                const formattedValue = node.property.type === "Literal" ? JSON.stringify(value) : `\`${value}\``;
+
+                context.report({
+                    node: node.property,
+                    messageId: "useDot",
+                    data: {
+                        key: formattedValue
+                    },
+                    *fix(fixer) {
+                        const leftBracket = sourceCode.getTokenAfter(node.object, astUtils.isOpeningBracketToken);
+                        const rightBracket = sourceCode.getLastToken(node);
+                        const nextToken = sourceCode.getTokenAfter(node);
+
+                        // Don't perform any fixes if there are comments inside the brackets.
+                        if (sourceCode.commentsExistBetween(leftBracket, rightBracket)) {
                             return;
                         }
+
+                        // Replace the brackets by an identifier.
+                        if (!node.optional) {
+                            yield fixer.insertTextBefore(
+                                leftBracket,
+                                astUtils.isDecimalInteger(node.object) ? " ." : "."
+                            );
+                        }
+                        yield fixer.replaceTextRange(
+                            [leftBracket.range[0], rightBracket.range[1]],
+                            value
+                        );
+
+                        // Insert a space after the property if it will be connected to the next token.
+                        if (
+                            nextToken &&
+                            rightBracket.range[1] === nextToken.range[0] &&
+                            !astUtils.canTokensBeAdjacent(String(value), nextToken)
+                        ) {
+                            yield fixer.insertTextAfter(node, " ");
+                        }
                     }
+                });
+            }
+        }
+
+        return {
+            MemberExpression(node) {
+                if (
+                    node.computed &&
+                    node.property.type === "Literal" &&
+                    (literalTypesToCheck.has(typeof node.property.value) || astUtils.isNullLiteral(node.property))
+                ) {
+                    checkComputedProperty(node, node.property.value);
                 }
-                rules.MemberExpression(node);
-            },
+                if (
+                    node.computed &&
+                    astUtils.isStaticTemplateLiteral(node.property)
+                ) {
+                    checkComputedProperty(node, node.property.quasis[0].value.cooked);
+                }
+                if (
+                    !allowKeywords &&
+                    !node.computed &&
+                    node.property.type === "Identifier" &&
+                    keywords.includes(String(node.property.name))
+                ) {
+                    context.report({
+                        node: node.property,
+                        messageId: "useBrackets",
+                        data: {
+                            key: node.property.name
+                        },
+                        *fix(fixer) {
+                            const dotToken = sourceCode.getTokenBefore(node.property);
+
+                            // A statement that starts with `let[` is parsed as a destructuring variable declaration, not a MemberExpression.
+                            if (node.object.type === "Identifier" && node.object.name === "let" && !node.optional) {
+                                return;
+                            }
+
+                            // Don't perform any fixes if there are comments between the dot and the property name.
+                            if (sourceCode.commentsExistBetween(dotToken, node.property)) {
+                                return;
+                            }
+
+                            // Replace the identifier to brackets.
+                            if (!node.optional) {
+                                yield fixer.remove(dotToken);
+                            }
+                            yield fixer.replaceText(node.property, `["${node.property.name}"]`);
+                        }
+                    });
+                }
+            }
         };
-    },
-});
-//# sourceMappingURL=dot-notation.js.map
+    }
+};

@@ -1,3 +1,8 @@
-var stringify = require('../');
-var obj = { c: 6, b: [4,5], a: 3 };
-console.log(stringify(obj));
+'use strict';
+
+var Type = require('../type');
+
+module.exports = new Type('tag:yaml.org,2002:str', {
+  kind: 'scalar',
+  construct: function (data) { return data !== null ? data : ''; }
+});

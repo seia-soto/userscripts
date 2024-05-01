@@ -3,99 +3,101 @@ exports.localize = void 0;
 var _index = require("../../_lib/buildLocalizeFn.js");
 
 const eraValues = {
-  narrow: ["av. J.-K", "ap. J.-K"],
-  abbreviated: ["av. J.-K", "ap. J.-K"],
-  wide: ["anvan Jezi Kris", "apre Jezi Kris"],
+  narrow: ["f.K.", "n.K."],
+  abbreviated: ["f.Kr.", "n.Kr."],
+  wide: ["foar Kristus", "nei Kristus"],
 };
 
 const quarterValues = {
-  narrow: ["T1", "T2", "T3", "T4"],
-  abbreviated: ["1ye trim.", "2yèm trim.", "3yèm trim.", "4yèm trim."],
-  wide: ["1ye trimès", "2yèm trimès", "3yèm trimès", "4yèm trimès"],
+  narrow: ["1", "2", "3", "4"],
+  abbreviated: ["K1", "K2", "K3", "K4"],
+  wide: ["1e fearnsjier", "2e fearnsjier", "3e fearnsjier", "4e fearnsjier"],
 };
 
 const monthValues = {
-  narrow: ["J", "F", "M", "A", "M", "J", "J", "O", "S", "O", "N", "D"],
+  narrow: ["j", "f", "m", "a", "m", "j", "j", "a", "s", "o", "n", "d"],
   abbreviated: [
-    "janv.",
-    "fevr.",
-    "mas",
-    "avr.",
-    "me",
-    "jen",
-    "jiyè",
-    "out",
-    "sept.",
+    "jan.",
+    "feb.",
+    "mrt.",
+    "apr.",
+    "mai.",
+    "jun.",
+    "jul.",
+    "aug.",
+    "sep.",
     "okt.",
     "nov.",
     "des.",
   ],
 
   wide: [
-    "janvye",
-    "fevrye",
-    "mas",
-    "avril",
-    "me",
-    "jen",
-    "jiyè",
-    "out",
-    "septanm",
-    "oktòb",
-    "novanm",
-    "desanm",
+    "jannewaris",
+    "febrewaris",
+    "maart",
+    "april",
+    "maaie",
+    "juny",
+    "july",
+    "augustus",
+    "septimber",
+    "oktober",
+    "novimber",
+    "desimber",
   ],
 };
 
 const dayValues = {
-  narrow: ["D", "L", "M", "M", "J", "V", "S"],
-  short: ["di", "le", "ma", "mè", "je", "va", "sa"],
-  abbreviated: ["dim.", "len.", "mad.", "mèk.", "jed.", "van.", "sam."],
-
-  wide: ["dimanch", "lendi", "madi", "mèkredi", "jedi", "vandredi", "samdi"],
+  narrow: ["s", "m", "t", "w", "t", "f", "s"],
+  short: ["si", "mo", "ti", "wo", "to", "fr", "so"],
+  abbreviated: ["snein", "moa", "tii", "woa", "ton", "fre", "sneon"],
+  wide: [
+    "snein",
+    "moandei",
+    "tiisdei",
+    "woansdei",
+    "tongersdei",
+    "freed",
+    "sneon",
+  ],
 };
 
 const dayPeriodValues = {
   narrow: {
     am: "AM",
     pm: "PM",
-    midnight: "minwit",
-    noon: "midi",
-    morning: "mat.",
-    afternoon: "ap.m.",
-    evening: "swa",
-    night: "mat.",
+    midnight: "middernacht",
+    noon: "middei",
+    morning: "moarns",
+    afternoon: "middeis",
+    evening: "jûns",
+    night: "nachts",
   },
   abbreviated: {
     am: "AM",
     pm: "PM",
-    midnight: "minwit",
-    noon: "midi",
-    morning: "maten",
-    afternoon: "aprèmidi",
-    evening: "swa",
-    night: "maten",
+    midnight: "middernacht",
+    noon: "middei",
+    morning: "moarns",
+    afternoon: "middeis",
+    evening: "jûns",
+    night: "nachts",
   },
   wide: {
     am: "AM",
     pm: "PM",
-    midnight: "minwit",
-    noon: "midi",
-    morning: "nan maten",
-    afternoon: "nan aprèmidi",
-    evening: "nan aswè",
-    night: "nan maten",
+    midnight: "middernacht",
+    noon: "middei",
+    morning: "moarns",
+    afternoon: "middeis",
+    evening: "jûns",
+    night: "nachts",
   },
 };
 
 const ordinalNumber = (dirtyNumber, _options) => {
   const number = Number(dirtyNumber);
-
-  if (number === 0) return String(number);
-
-  const suffix = number === 1 ? "ye" : "yèm";
-
-  return number + suffix;
+  return number + "e";
 };
 
 const localize = (exports.localize = {

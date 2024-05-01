@@ -1,23 +1,43 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.read = void 0;
-function read(path, settings) {
-    const lstat = settings.fs.lstatSync(path);
-    if (!lstat.isSymbolicLink() || !settings.followSymbolicLink) {
-        return lstat;
+const fsStat = require("@nodelib/fs.stat");
+const fsWalk = require("@nodelib/fs.walk");
+const reader_1 = require("./reader");
+class ReaderSync extends reader_1.default {
+    constructor() {
+        super(...arguments);
+        this._walkSync = fsWalk.walkSync;
+        this._statSync = fsStat.statSync;
     }
-    try {
-        const stat = settings.fs.statSync(path);
-        if (settings.markSymbolicLink) {
-            stat.isSymbolicLink = () => true;
-        }
-        return stat;
+    dynamic(root, options) {
+        return this._walkSync(root, options);
     }
-    catch (error) {
-        if (!settings.throwErrorOnBrokenSymbolicLink) {
-            return lstat;
+    static(patterns, options) {
+        const entries = [];
+        for (const pattern of patterns) {
+            const filepath = this._getFullEntryPath(pattern);
+            const entry = this._getEntry(filepath, pattern, options);
+            if (entry === null || !options.entryFilter(entry)) {
+                continue;
+            }
+            entries.push(entry);
         }
-        throw error;
+        return entries;
+    }
+    _getEntry(filepath, pattern, options) {
+        try {
+            const stats = this._getStat(filepath);
+            return this._makeEntry(stats, pattern);
+        }
+        catch (error) {
+            if (options.errorFilter(error)) {
+                return null;
+            }
+            throw error;
+        }
+    }
+    _getStat(filepath) {
+        return this._statSync(filepath, this._fsStatSettings);
     }
 }
-exports.read = read;
+exports.default = ReaderSync;

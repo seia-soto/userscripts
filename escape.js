@@ -1,18 +1,45 @@
-/**
- * Escape all magic characters in a glob pattern.
- *
- * If the {@link windowsPathsNoEscape | GlobOptions.windowsPathsNoEscape}
- * option is used, then characters are escaped by wrapping in `[]`, because
- * a magic character wrapped in a character class can only be satisfied by
- * that exact character.  In this mode, `\` is _not_ escaped, because it is
- * not interpreted as a magic character, but instead as a path separator.
- */
-export const escape = (s, { windowsPathsNoEscape = false, } = {}) => {
-    // don't need to escape +@! because we escape the parens
-    // that make those magic, and escaping ! as [!] isn't valid,
-    // because [!]] is a valid glob class meaning not ']'.
-    return windowsPathsNoEscape
-        ? s.replace(/[?*()[\]]/g, '[$&]')
-        : s.replace(/[?*()[\]\\]/g, '\\$&');
-};
-//# sourceMappingURL=escape.js.map
+'use strict';
+
+// See http://www.robvanderwoude.com/escapechars.php
+const metaCharsRegExp = /([()\][%!^"`<>&|;, *?])/g;
+
+function escapeCommand(arg) {
+    // Escape meta chars
+    arg = arg.replace(metaCharsRegExp, '^$1');
+
+    return arg;
+}
+
+function escapeArgument(arg, doubleEscapeMetaChars) {
+    // Convert to string
+    arg = `${arg}`;
+
+    // Algorithm below is based on https://qntm.org/cmd
+
+    // Sequence of backslashes followed by a double quote:
+    // double up all the backslashes and escape the double quote
+    arg = arg.replace(/(\\*)"/g, '$1$1\\"');
+
+    // Sequence of backslashes followed by the end of the string
+    // (which will become a double quote later):
+    // double up all the backslashes
+    arg = arg.replace(/(\\*)$/, '$1$1');
+
+    // All other backslashes occur literally
+
+    // Quote the whole thing:
+    arg = `"${arg}"`;
+
+    // Escape meta chars
+    arg = arg.replace(metaCharsRegExp, '^$1');
+
+    // Double escape meta chars if necessary
+    if (doubleEscapeMetaChars) {
+        arg = arg.replace(metaCharsRegExp, '^$1');
+    }
+
+    return arg;
+}
+
+module.exports.command = escapeCommand;
+module.exports.argument = escapeArgument;

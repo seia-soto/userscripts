@@ -1,40 +1,7 @@
 "use strict";
-exports.isDate = isDate; /**
- * @name isDate
- * @category Common Helpers
- * @summary Is the given value a date?
- *
- * @description
- * Returns true if the given value is an instance of Date. The function works for dates transferred across iframes.
- *
- * @param value - The value to check
- *
- * @returns True if the given value is a date
- *
- * @example
- * // For a valid date:
- * const result = isDate(new Date())
- * //=> true
- *
- * @example
- * // For an invalid date:
- * const result = isDate(new Date(NaN))
- * //=> true
- *
- * @example
- * // For some value:
- * const result = isDate('2014-02-31')
- * //=> false
- *
- * @example
- * // For an object:
- * const result = isDate({})
- * //=> false
- */
-function isDate(value) {
-  return (
-    value instanceof Date ||
-    (typeof value === "object" &&
-      Object.prototype.toString.call(value) === "[object Date]")
-  );
-}
+exports.isDate = void 0;
+
+var _index = require("../isDate.js");
+var _index2 = require("./_lib/convertToFP.js"); // This file is generated automatically by `scripts/build/fp.ts`. Please, don't change it.
+
+const isDate = (exports.isDate = (0, _index2.convertToFP)(_index.isDate, 1));

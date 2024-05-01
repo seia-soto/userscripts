@@ -1,27 +1,10 @@
 "use strict";
-exports.subHours = subHours;
-var _index = require("./addHours.js");
+exports.subHours = void 0;
 
-/**
- * @name subHours
- * @category Hour Helpers
- * @summary Subtract the specified number of hours from the given date.
- *
- * @description
- * Subtract the specified number of hours from the given date.
- *
- * @typeParam DateType - The `Date` type, the function operates on. Gets inferred from passed arguments. Allows to use extensions like [`UTCDate`](https://github.com/date-fns/utc).
- *
- * @param date - The date to be changed
- * @param amount - The amount of hours to be subtracted.
- *
- * @returns The new date with the hours subtracted
- *
- * @example
- * // Subtract 2 hours from 11 July 2014 01:00:00:
- * const result = subHours(new Date(2014, 6, 11, 1, 0), 2)
- * //=> Thu Jul 10 2014 23:00:00
- */
-function subHours(date, amount) {
-  return (0, _index.addHours)(date, -amount);
-}
+var _index = require("../subHours.js");
+var _index2 = require("./_lib/convertToFP.js"); // This file is generated automatically by `scripts/build/fp.ts`. Please, don't change it.
+
+const subHours = (exports.subHours = (0, _index2.convertToFP)(
+  _index.subHours,
+  2,
+));

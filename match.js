@@ -4,31 +4,33 @@ exports.match = void 0;
 var _index = require("../../_lib/buildMatchFn.js");
 var _index2 = require("../../_lib/buildMatchPatternFn.js");
 
-const matchOrdinalNumberPattern = /^(\d+)(ye|yèm)?/i;
+const matchOrdinalNumberPattern = /^(\d+)e?/i;
 const parseOrdinalNumberPattern = /\d+/i;
 
 const matchEraPatterns = {
-  narrow: /^(av\.J\.K|ap\.J\.K|ap\.J\.-K)/i,
-  abbreviated: /^(av\.J\.-K|av\.J-K|apr\.J\.-K|apr\.J-K|ap\.J-K)/i,
-  wide: /^(avan Jezi Kris|apre Jezi Kris)/i,
+  narrow: /^([fn]\.? ?K\.?)/,
+  abbreviated: /^([fn]\. ?Kr\.?)/,
+  wide: /^((foar|nei) Kristus)/,
 };
 const parseEraPatterns = {
-  any: [/^av/i, /^ap/i],
+  any: [/^f/, /^n/],
 };
 
 const matchQuarterPatterns = {
   narrow: /^[1234]/i,
-  abbreviated: /^t[1234]/i,
-  wide: /^[1234](ye|yèm)? trimès/i,
+  abbreviated: /^K[1234]/i,
+  wide: /^[1234]e fearnsjier/i,
 };
+
 const parseQuarterPatterns = {
   any: [/1/i, /2/i, /3/i, /4/i],
 };
 
 const matchMonthPatterns = {
   narrow: /^[jfmasond]/i,
-  abbreviated: /^(janv|fevr|mas|avr|me|jen|jiyè|out|sept|okt|nov|des)\.?/i,
-  wide: /^(janvye|fevrye|mas|avril|me|jen|jiyè|out|septanm|oktòb|novanm|desanm)/i,
+  abbreviated:
+    /^(jan.|feb.|mrt.|apr.|mai.|jun.|jul.|aug.|sep.|okt.|nov.|des.)/i,
+  wide: /^(jannewaris|febrewaris|maart|april|maaie|juny|july|augustus|septimber|oktober|novimber|desimber)/i,
 };
 const parseMonthPatterns = {
   narrow: [
@@ -39,7 +41,7 @@ const parseMonthPatterns = {
     /^m/i,
     /^j/i,
     /^j/i,
-    /^o/i,
+    /^a/i,
     /^s/i,
     /^o/i,
     /^n/i,
@@ -47,46 +49,45 @@ const parseMonthPatterns = {
   ],
 
   any: [
-    /^ja/i,
-    /^f/i,
-    /^ma/i,
-    /^av/i,
-    /^me/i,
-    /^je/i,
-    /^ji/i,
-    /^ou/i,
-    /^s/i,
-    /^ok/i,
-    /^n/i,
-    /^d/i,
+    /^jan/i,
+    /^feb/i,
+    /^m(r|a)/i,
+    /^apr/i,
+    /^mai/i,
+    /^jun/i,
+    /^jul/i,
+    /^aug/i,
+    /^sep/i,
+    /^okt/i,
+    /^nov/i,
+    /^des/i,
   ],
 };
 
 const matchDayPatterns = {
-  narrow: /^[lmjvsd]/i,
-  short: /^(di|le|ma|me|je|va|sa)/i,
-  abbreviated: /^(dim|len|mad|mèk|jed|van|sam)\.?/i,
-  wide: /^(dimanch|lendi|madi|mèkredi|jedi|vandredi|samdi)/i,
+  narrow: /^[smtwf]/i,
+  short: /^(si|mo|ti|wo|to|fr|so)/i,
+  abbreviated: /^(snein|moa|tii|woa|ton|fre|sneon)/i,
+  wide: /^(snein|moandei|tiisdei|woansdei|tongersdei|freed|sneon)/i,
 };
 const parseDayPatterns = {
-  narrow: [/^d/i, /^l/i, /^m/i, /^m/i, /^j/i, /^v/i, /^s/i],
-  any: [/^di/i, /^le/i, /^ma/i, /^mè/i, /^je/i, /^va/i, /^sa/i],
+  narrow: [/^s/i, /^m/i, /^t/i, /^w/i, /^t/i, /^f/i, /^s/i],
+  any: [/^sn/i, /^mo/i, /^ti/i, /^wo/i, /^to/i, /^fr/i, /^sn/i],
 };
 
 const matchDayPeriodPatterns = {
-  narrow: /^(a|p|minwit|midi|mat\.?|ap\.?m\.?|swa)/i,
-  any: /^([ap]\.?\s?m\.?|nan maten|nan aprèmidi|nan aswè)/i,
+  any: /^(am|pm|middernacht|middeis|moarns|middei|jûns|nachts)/i,
 };
 const parseDayPeriodPatterns = {
   any: {
-    am: /^a/i,
-    pm: /^p/i,
-    midnight: /^min/i,
-    noon: /^mid/i,
-    morning: /mat/i,
-    afternoon: /ap/i,
-    evening: /sw/i,
-    night: /nwit/i,
+    am: /^am/i,
+    pm: /^pm/i,
+    midnight: /^middernacht/i,
+    noon: /^middei/i,
+    morning: /moarns/i,
+    afternoon: /^middeis/i,
+    evening: /jûns/i,
+    night: /nachts/i,
   },
 };
 

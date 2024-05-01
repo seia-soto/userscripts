@@ -1,33 +1,227 @@
 "use strict";
-exports.timezonePatterns = exports.numericPatterns = void 0;
-const numericPatterns = (exports.numericPatterns = {
-  month: /^(1[0-2]|0?\d)/, // 0 to 12
-  date: /^(3[0-1]|[0-2]?\d)/, // 0 to 31
-  dayOfYear: /^(36[0-6]|3[0-5]\d|[0-2]?\d?\d)/, // 0 to 366
-  week: /^(5[0-3]|[0-4]?\d)/, // 0 to 53
-  hour23h: /^(2[0-3]|[0-1]?\d)/, // 0 to 23
-  hour24h: /^(2[0-4]|[0-1]?\d)/, // 0 to 24
-  hour11h: /^(1[0-1]|0?\d)/, // 0 to 11
-  hour12h: /^(1[0-2]|0?\d)/, // 0 to 12
-  minute: /^[0-5]?\d/, // 0 to 59
-  second: /^[0-5]?\d/, // 0 to 59
+exports.secondsInYear =
+  exports.secondsInWeek =
+  exports.secondsInQuarter =
+  exports.secondsInMonth =
+  exports.secondsInMinute =
+  exports.secondsInHour =
+  exports.secondsInDay =
+  exports.quartersInYear =
+  exports.monthsInYear =
+  exports.monthsInQuarter =
+  exports.minutesInYear =
+  exports.minutesInMonth =
+  exports.minutesInHour =
+  exports.minutesInDay =
+  exports.minTime =
+  exports.millisecondsInWeek =
+  exports.millisecondsInSecond =
+  exports.millisecondsInMinute =
+  exports.millisecondsInHour =
+  exports.millisecondsInDay =
+  exports.maxTime =
+  exports.daysInYear =
+  exports.daysInWeek =
+    void 0; /**
+ * @module constants
+ * @summary Useful constants
+ * @description
+ * Collection of useful date constants.
+ *
+ * The constants could be imported from `date-fns/constants`:
+ *
+ * ```ts
+ * import { maxTime, minTime } from "date-fns/constants";
+ *
+ * function isAllowedTime(time) {
+ *   return time <= maxTime && time >= minTime;
+ * }
+ * ```
+ */
 
-  singleDigit: /^\d/, // 0 to 9
-  twoDigits: /^\d{1,2}/, // 0 to 99
-  threeDigits: /^\d{1,3}/, // 0 to 999
-  fourDigits: /^\d{1,4}/, // 0 to 9999
+/**
+ * @constant
+ * @name daysInWeek
+ * @summary Days in 1 week.
+ */
+const daysInWeek = (exports.daysInWeek = 7);
 
-  anyDigitsSigned: /^-?\d+/,
-  singleDigitSigned: /^-?\d/, // 0 to 9, -0 to -9
-  twoDigitsSigned: /^-?\d{1,2}/, // 0 to 99, -0 to -99
-  threeDigitsSigned: /^-?\d{1,3}/, // 0 to 999, -0 to -999
-  fourDigitsSigned: /^-?\d{1,4}/, // 0 to 9999, -0 to -9999
-});
+/**
+ * @constant
+ * @name daysInYear
+ * @summary Days in 1 year.
+ *
+ * @description
+ * How many days in a year.
+ *
+ * One years equals 365.2425 days according to the formula:
+ *
+ * > Leap year occures every 4 years, except for years that are divisable by 100 and not divisable by 400.
+ * > 1 mean year = (365+1/4-1/100+1/400) days = 365.2425 days
+ */
+const daysInYear = (exports.daysInYear = 365.2425);
 
-const timezonePatterns = (exports.timezonePatterns = {
-  basicOptionalMinutes: /^([+-])(\d{2})(\d{2})?|Z/,
-  basic: /^([+-])(\d{2})(\d{2})|Z/,
-  basicOptionalSeconds: /^([+-])(\d{2})(\d{2})((\d{2}))?|Z/,
-  extended: /^([+-])(\d{2}):(\d{2})|Z/,
-  extendedOptionalSeconds: /^([+-])(\d{2}):(\d{2})(:(\d{2}))?|Z/,
-});
+/**
+ * @constant
+ * @name maxTime
+ * @summary Maximum allowed time.
+ *
+ * @example
+ * import { maxTime } from "date-fns/constants";
+ *
+ * const isValid = 8640000000000001 <= maxTime;
+ * //=> false
+ *
+ * new Date(8640000000000001);
+ * //=> Invalid Date
+ */
+const maxTime = (exports.maxTime = Math.pow(10, 8) * 24 * 60 * 60 * 1000);
+
+/**
+ * @constant
+ * @name minTime
+ * @summary Minimum allowed time.
+ *
+ * @example
+ * import { minTime } from "date-fns/constants";
+ *
+ * const isValid = -8640000000000001 >= minTime;
+ * //=> false
+ *
+ * new Date(-8640000000000001)
+ * //=> Invalid Date
+ */
+const minTime = (exports.minTime = -maxTime);
+
+/**
+ * @constant
+ * @name millisecondsInWeek
+ * @summary Milliseconds in 1 week.
+ */
+const millisecondsInWeek = (exports.millisecondsInWeek = 604800000);
+
+/**
+ * @constant
+ * @name millisecondsInDay
+ * @summary Milliseconds in 1 day.
+ */
+const millisecondsInDay = (exports.millisecondsInDay = 86400000);
+
+/**
+ * @constant
+ * @name millisecondsInMinute
+ * @summary Milliseconds in 1 minute
+ */
+const millisecondsInMinute = (exports.millisecondsInMinute = 60000);
+
+/**
+ * @constant
+ * @name millisecondsInHour
+ * @summary Milliseconds in 1 hour
+ */
+const millisecondsInHour = (exports.millisecondsInHour = 3600000);
+
+/**
+ * @constant
+ * @name millisecondsInSecond
+ * @summary Milliseconds in 1 second
+ */
+const millisecondsInSecond = (exports.millisecondsInSecond = 1000);
+
+/**
+ * @constant
+ * @name minutesInYear
+ * @summary Minutes in 1 year.
+ */
+const minutesInYear = (exports.minutesInYear = 525600);
+
+/**
+ * @constant
+ * @name minutesInMonth
+ * @summary Minutes in 1 month.
+ */
+const minutesInMonth = (exports.minutesInMonth = 43200);
+
+/**
+ * @constant
+ * @name minutesInDay
+ * @summary Minutes in 1 day.
+ */
+const minutesInDay = (exports.minutesInDay = 1440);
+
+/**
+ * @constant
+ * @name minutesInHour
+ * @summary Minutes in 1 hour.
+ */
+const minutesInHour = (exports.minutesInHour = 60);
+
+/**
+ * @constant
+ * @name monthsInQuarter
+ * @summary Months in 1 quarter.
+ */
+const monthsInQuarter = (exports.monthsInQuarter = 3);
+
+/**
+ * @constant
+ * @name monthsInYear
+ * @summary Months in 1 year.
+ */
+const monthsInYear = (exports.monthsInYear = 12);
+
+/**
+ * @constant
+ * @name quartersInYear
+ * @summary Quarters in 1 year
+ */
+const quartersInYear = (exports.quartersInYear = 4);
+
+/**
+ * @constant
+ * @name secondsInHour
+ * @summary Seconds in 1 hour.
+ */
+const secondsInHour = (exports.secondsInHour = 3600);
+
+/**
+ * @constant
+ * @name secondsInMinute
+ * @summary Seconds in 1 minute.
+ */
+const secondsInMinute = (exports.secondsInMinute = 60);
+
+/**
+ * @constant
+ * @name secondsInDay
+ * @summary Seconds in 1 day.
+ */
+const secondsInDay = (exports.secondsInDay = secondsInHour * 24);
+
+/**
+ * @constant
+ * @name secondsInWeek
+ * @summary Seconds in 1 week.
+ */
+const secondsInWeek = (exports.secondsInWeek = secondsInDay * 7);
+
+/**
+ * @constant
+ * @name secondsInYear
+ * @summary Seconds in 1 year.
+ */
+const secondsInYear = (exports.secondsInYear = secondsInDay * daysInYear);
+
+/**
+ * @constant
+ * @name secondsInMonth
+ * @summary Seconds in 1 month
+ */
+const secondsInMonth = (exports.secondsInMonth = secondsInYear / 12);
+
+/**
+ * @constant
+ * @name secondsInQuarter
+ * @summary Seconds in 1 quarter.
+ */
+const secondsInQuarter = (exports.secondsInQuarter = secondsInMonth * 3);

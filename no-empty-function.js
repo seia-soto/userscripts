@@ -1,132 +1,167 @@
+/**
+ * @fileoverview Rule to disallow empty functions.
+ * @author Toru Nagashima
+ */
+
 "use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-const utils_1 = require("@typescript-eslint/utils");
-const util_1 = require("../util");
-const getESLintCoreRule_1 = require("../util/getESLintCoreRule");
-const baseRule = (0, getESLintCoreRule_1.getESLintCoreRule)('no-empty-function');
-const schema = (0, util_1.deepMerge)(
-// eslint-disable-next-line @typescript-eslint/no-unsafe-argument -- https://github.com/microsoft/TypeScript/issues/17002
-Array.isArray(baseRule.meta.schema)
-    ? baseRule.meta.schema[0]
-    : baseRule.meta.schema, {
-    properties: {
-        allow: {
-            items: {
-                type: 'string',
-                enum: [
-                    'functions',
-                    'arrowFunctions',
-                    'generatorFunctions',
-                    'methods',
-                    'generatorMethods',
-                    'getters',
-                    'setters',
-                    'constructors',
-                    'private-constructors',
-                    'protected-constructors',
-                    'asyncFunctions',
-                    'asyncMethods',
-                    'decoratedFunctions',
-                    'overrideMethods',
-                ],
-            },
-        },
-    },
-});
-exports.default = (0, util_1.createRule)({
-    name: 'no-empty-function',
+
+//------------------------------------------------------------------------------
+// Requirements
+//------------------------------------------------------------------------------
+
+const astUtils = require("./utils/ast-utils");
+
+//------------------------------------------------------------------------------
+// Helpers
+//------------------------------------------------------------------------------
+
+const ALLOW_OPTIONS = Object.freeze([
+    "functions",
+    "arrowFunctions",
+    "generatorFunctions",
+    "methods",
+    "generatorMethods",
+    "getters",
+    "setters",
+    "constructors",
+    "asyncFunctions",
+    "asyncMethods"
+]);
+
+/**
+ * Gets the kind of a given function node.
+ * @param {ASTNode} node A function node to get. This is one of
+ *      an ArrowFunctionExpression, a FunctionDeclaration, or a
+ *      FunctionExpression.
+ * @returns {string} The kind of the function. This is one of "functions",
+ *      "arrowFunctions", "generatorFunctions", "asyncFunctions", "methods",
+ *      "generatorMethods", "asyncMethods", "getters", "setters", and
+ *      "constructors".
+ */
+function getKind(node) {
+    const parent = node.parent;
+    let kind = "";
+
+    if (node.type === "ArrowFunctionExpression") {
+        return "arrowFunctions";
+    }
+
+    // Detects main kind.
+    if (parent.type === "Property") {
+        if (parent.kind === "get") {
+            return "getters";
+        }
+        if (parent.kind === "set") {
+            return "setters";
+        }
+        kind = parent.method ? "methods" : "functions";
+
+    } else if (parent.type === "MethodDefinition") {
+        if (parent.kind === "get") {
+            return "getters";
+        }
+        if (parent.kind === "set") {
+            return "setters";
+        }
+        if (parent.kind === "constructor") {
+            return "constructors";
+        }
+        kind = "methods";
+
+    } else {
+        kind = "functions";
+    }
+
+    // Detects prefix.
+    let prefix = "";
+
+    if (node.generator) {
+        prefix = "generator";
+    } else if (node.async) {
+        prefix = "async";
+    } else {
+        return kind;
+    }
+    return prefix + kind[0].toUpperCase() + kind.slice(1);
+}
+
+//------------------------------------------------------------------------------
+// Rule Definition
+//------------------------------------------------------------------------------
+
+/** @type {import('../shared/types').Rule} */
+module.exports = {
     meta: {
-        type: 'suggestion',
+        type: "suggestion",
+
         docs: {
-            description: 'Disallow empty functions',
-            recommended: 'stylistic',
-            extendsBaseRule: true,
+            description: "Disallow empty functions",
+            recommended: false,
+            url: "https://eslint.org/docs/latest/rules/no-empty-function"
         },
-        hasSuggestions: baseRule.meta.hasSuggestions,
-        schema: [schema],
-        messages: baseRule.meta.messages,
+
+        schema: [
+            {
+                type: "object",
+                properties: {
+                    allow: {
+                        type: "array",
+                        items: { enum: ALLOW_OPTIONS },
+                        uniqueItems: true
+                    }
+                },
+                additionalProperties: false
+            }
+        ],
+
+        messages: {
+            unexpected: "Unexpected empty {{name}}."
+        }
     },
-    defaultOptions: [
-        {
-            allow: [],
-        },
-    ],
-    create(context, [{ allow = [] }]) {
-        const rules = baseRule.create(context);
-        const isAllowedProtectedConstructors = allow.includes('protected-constructors');
-        const isAllowedPrivateConstructors = allow.includes('private-constructors');
-        const isAllowedDecoratedFunctions = allow.includes('decoratedFunctions');
-        const isAllowedOverrideMethods = allow.includes('overrideMethods');
+
+    create(context) {
+        const options = context.options[0] || {};
+        const allowed = options.allow || [];
+
+        const sourceCode = context.sourceCode;
+
         /**
-         * Check if the method body is empty
-         * @param node the node to be validated
-         * @returns true if the body is empty
-         * @private
+         * Reports a given function node if the node matches the following patterns.
+         *
+         * - Not allowed by options.
+         * - The body is empty.
+         * - The body doesn't have any comments.
+         * @param {ASTNode} node A function node to report. This is one of
+         *      an ArrowFunctionExpression, a FunctionDeclaration, or a
+         *      FunctionExpression.
+         * @returns {void}
          */
-        function isBodyEmpty(node) {
-            return node.body.body.length === 0;
-        }
-        /**
-         * Check if method has parameter properties
-         * @param node the node to be validated
-         * @returns true if the body has parameter properties
-         * @private
-         */
-        function hasParameterProperties(node) {
-            return node.params.some(param => param.type === utils_1.AST_NODE_TYPES.TSParameterProperty);
-        }
-        /**
-         * @param node the node to be validated
-         * @returns true if the constructor is allowed to be empty
-         * @private
-         */
-        function isAllowedEmptyConstructor(node) {
-            const parent = node.parent;
-            if (isBodyEmpty(node) &&
-                parent.type === utils_1.AST_NODE_TYPES.MethodDefinition &&
-                parent.kind === 'constructor') {
-                const { accessibility } = parent;
-                return (
-                // allow protected constructors
-                (accessibility === 'protected' && isAllowedProtectedConstructors) ||
-                    // allow private constructors
-                    (accessibility === 'private' && isAllowedPrivateConstructors) ||
-                    // allow constructors which have parameter properties
-                    hasParameterProperties(node));
+        function reportIfEmpty(node) {
+            const kind = getKind(node);
+            const name = astUtils.getFunctionNameWithKind(node);
+            const innerComments = sourceCode.getTokens(node.body, {
+                includeComments: true,
+                filter: astUtils.isCommentToken
+            });
+
+            if (!allowed.includes(kind) &&
+                node.body.type === "BlockStatement" &&
+                node.body.body.length === 0 &&
+                innerComments.length === 0
+            ) {
+                context.report({
+                    node,
+                    loc: node.body.loc,
+                    messageId: "unexpected",
+                    data: { name }
+                });
             }
-            return false;
         }
-        /**
-         * @param node the node to be validated
-         * @returns true if a function has decorators
-         * @private
-         */
-        function isAllowedEmptyDecoratedFunctions(node) {
-            if (isAllowedDecoratedFunctions && isBodyEmpty(node)) {
-                const decorators = node.parent.type === utils_1.AST_NODE_TYPES.MethodDefinition
-                    ? node.parent.decorators
-                    : undefined;
-                return !!decorators && !!decorators.length;
-            }
-            return false;
-        }
-        function isAllowedEmptyOverrideMethod(node) {
-            return (isAllowedOverrideMethods &&
-                isBodyEmpty(node) &&
-                node.parent.type === utils_1.AST_NODE_TYPES.MethodDefinition &&
-                node.parent.override);
-        }
+
         return {
-            ...rules,
-            FunctionExpression(node) {
-                if (isAllowedEmptyConstructor(node) ||
-                    isAllowedEmptyDecoratedFunctions(node) ||
-                    isAllowedEmptyOverrideMethod(node)) {
-                    return;
-                }
-                rules.FunctionExpression(node);
-            },
+            ArrowFunctionExpression: reportIfEmpty,
+            FunctionDeclaration: reportIfEmpty,
+            FunctionExpression: reportIfEmpty
         };
-    },
-});
-//# sourceMappingURL=no-empty-function.js.map
+    }
+};

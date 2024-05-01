@@ -1,30 +1,10 @@
 "use strict";
-exports.secondsToMinutes = secondsToMinutes;
-var _index = require("./constants.js");
+exports.secondsToMinutes = void 0;
 
-/**
- * @name secondsToMinutes
- * @category Conversion Helpers
- * @summary Convert seconds to minutes.
- *
- * @description
- * Convert a number of seconds to a full number of minutes.
- *
- * @param seconds - The number of seconds to be converted
- *
- * @returns The number of seconds converted in minutes
- *
- * @example
- * // Convert 120 seconds into minutes
- * const result = secondsToMinutes(120)
- * //=> 2
- *
- * @example
- * // It uses floor rounding:
- * const result = secondsToMinutes(119)
- * //=> 1
- */
-function secondsToMinutes(seconds) {
-  const minutes = seconds / _index.secondsInMinute;
-  return Math.trunc(minutes);
-}
+var _index = require("../secondsToMinutes.js");
+var _index2 = require("./_lib/convertToFP.js"); // This file is generated automatically by `scripts/build/fp.ts`. Please, don't change it.
+
+const secondsToMinutes = (exports.secondsToMinutes = (0, _index2.convertToFP)(
+  _index.secondsToMinutes,
+  1,
+));

@@ -22,148 +22,51 @@ var __importStar = (this && this.__importStar) || function (mod) {
     __setModuleDefault(result, mod);
     return result;
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.isTypeTemplateLiteralType = exports.isTypeBigIntLiteralType = exports.typeIsOrHasBaseType = exports.isAnyOrAnyArrayTypeDiscriminated = exports.AnyType = exports.isTypeUnknownArrayType = exports.isTypeAnyArrayType = exports.isTypeAnyType = exports.isTypeReferenceType = exports.isTypeUnknownType = exports.isTypeNeverType = exports.isTypeArrayTypeOrUnionOfArrayTypes = exports.isNullableType = void 0;
-const debug_1 = __importDefault(require("debug"));
-const tsutils = __importStar(require("ts-api-utils"));
-const ts = __importStar(require("typescript"));
-const typeFlagUtils_1 = require("./typeFlagUtils");
-const log = (0, debug_1.default)('typescript-eslint:eslint-plugin:utils:types');
-/**
- * Checks if the given type is (or accepts) nullable
- */
-function isNullableType(type, _deprecated) {
-    return (0, typeFlagUtils_1.isTypeFlagSet)(type, ts.TypeFlags.Any |
-        ts.TypeFlags.Unknown |
-        ts.TypeFlags.Null |
-        ts.TypeFlags.Undefined);
-}
-exports.isNullableType = isNullableType;
-/**
- * Checks if the given type is either an array type,
- * or a union made up solely of array types.
- */
-function isTypeArrayTypeOrUnionOfArrayTypes(type, checker) {
-    for (const t of tsutils.unionTypeParts(type)) {
-        if (!checker.isArrayType(t)) {
-            return false;
-        }
-    }
-    return true;
-}
-exports.isTypeArrayTypeOrUnionOfArrayTypes = isTypeArrayTypeOrUnionOfArrayTypes;
-/**
- * @returns true if the type is `never`
- */
-function isTypeNeverType(type) {
-    return (0, typeFlagUtils_1.isTypeFlagSet)(type, ts.TypeFlags.Never);
-}
-exports.isTypeNeverType = isTypeNeverType;
-/**
- * @returns true if the type is `unknown`
- */
-function isTypeUnknownType(type) {
-    return (0, typeFlagUtils_1.isTypeFlagSet)(type, ts.TypeFlags.Unknown);
-}
-exports.isTypeUnknownType = isTypeUnknownType;
-// https://github.com/microsoft/TypeScript/blob/42aa18bf442c4df147e30deaf27261a41cbdc617/src/compiler/types.ts#L5157
-const Nullable = ts.TypeFlags.Undefined | ts.TypeFlags.Null;
-// https://github.com/microsoft/TypeScript/blob/42aa18bf442c4df147e30deaf27261a41cbdc617/src/compiler/types.ts#L5187
-const ObjectFlagsType = ts.TypeFlags.Any |
-    Nullable |
-    ts.TypeFlags.Never |
-    ts.TypeFlags.Object |
-    ts.TypeFlags.Union |
-    ts.TypeFlags.Intersection;
-function isTypeReferenceType(type) {
-    if ((type.flags & ObjectFlagsType) === 0) {
-        return false;
-    }
-    const objectTypeFlags = type.objectFlags;
-    return (objectTypeFlags & ts.ObjectFlags.Reference) !== 0;
-}
-exports.isTypeReferenceType = isTypeReferenceType;
-/**
- * @returns true if the type is `any`
- */
-function isTypeAnyType(type) {
-    if ((0, typeFlagUtils_1.isTypeFlagSet)(type, ts.TypeFlags.Any)) {
-        if (type.intrinsicName === 'error') {
-            log('Found an "error" any type');
-        }
-        return true;
-    }
-    return false;
-}
-exports.isTypeAnyType = isTypeAnyType;
-/**
- * @returns true if the type is `any[]`
- */
-function isTypeAnyArrayType(type, checker) {
-    return (checker.isArrayType(type) &&
-        isTypeAnyType(checker.getTypeArguments(type)[0]));
-}
-exports.isTypeAnyArrayType = isTypeAnyArrayType;
-/**
- * @returns true if the type is `unknown[]`
- */
-function isTypeUnknownArrayType(type, checker) {
-    return (checker.isArrayType(type) &&
-        isTypeUnknownType(checker.getTypeArguments(type)[0]));
-}
-exports.isTypeUnknownArrayType = isTypeUnknownArrayType;
-var AnyType;
-(function (AnyType) {
-    AnyType[AnyType["Any"] = 0] = "Any";
-    AnyType[AnyType["AnyArray"] = 1] = "AnyArray";
-    AnyType[AnyType["Safe"] = 2] = "Safe";
-})(AnyType || (exports.AnyType = AnyType = {}));
-/**
- * @returns `AnyType.Any` if the type is `any`, `AnyType.AnyArray` if the type is `any[]` or `readonly any[]`,
- *          otherwise it returns `AnyType.Safe`.
- */
-function isAnyOrAnyArrayTypeDiscriminated(node, checker) {
-    const type = checker.getTypeAtLocation(node);
-    if (isTypeAnyType(type)) {
-        return AnyType.Any;
-    }
-    if (isTypeAnyArrayType(type, checker)) {
-        return AnyType.AnyArray;
-    }
-    return AnyType.Safe;
-}
-exports.isAnyOrAnyArrayTypeDiscriminated = isAnyOrAnyArrayTypeDiscriminated;
-/**
- * @returns Whether a type is an instance of the parent type, including for the parent's base types.
- */
-function typeIsOrHasBaseType(type, parentType) {
-    const parentSymbol = parentType.getSymbol();
-    if (!type.getSymbol() || !parentSymbol) {
-        return false;
-    }
-    const typeAndBaseTypes = [type];
-    const ancestorTypes = type.getBaseTypes();
-    if (ancestorTypes) {
-        typeAndBaseTypes.push(...ancestorTypes);
-    }
-    for (const baseType of typeAndBaseTypes) {
-        const baseSymbol = baseType.getSymbol();
-        if (baseSymbol && baseSymbol.name === parentSymbol.name) {
-            return true;
-        }
-    }
-    return false;
-}
-exports.typeIsOrHasBaseType = typeIsOrHasBaseType;
-function isTypeBigIntLiteralType(type) {
-    return (0, typeFlagUtils_1.isTypeFlagSet)(type, ts.TypeFlags.BigIntLiteral);
-}
-exports.isTypeBigIntLiteralType = isTypeBigIntLiteralType;
-function isTypeTemplateLiteralType(type) {
-    return (0, typeFlagUtils_1.isTypeFlagSet)(type, ts.TypeFlags.TemplateLiteral);
-}
-exports.isTypeTemplateLiteralType = isTypeTemplateLiteralType;
+exports.isSemicolonToken = exports.isOpeningParenToken = exports.isOpeningBracketToken = exports.isOpeningBraceToken = exports.isNotSemicolonToken = exports.isNotOpeningParenToken = exports.isNotOpeningBracketToken = exports.isNotOpeningBraceToken = exports.isNotCommentToken = exports.isNotCommaToken = exports.isNotColonToken = exports.isNotClosingParenToken = exports.isNotClosingBracketToken = exports.isNotClosingBraceToken = exports.isNotArrowToken = exports.isCommentToken = exports.isCommaToken = exports.isColonToken = exports.isClosingParenToken = exports.isClosingBracketToken = exports.isClosingBraceToken = exports.isArrowToken = void 0;
+const eslintUtils = __importStar(require("@eslint-community/eslint-utils"));
+const isArrowToken = eslintUtils.isArrowToken;
+exports.isArrowToken = isArrowToken;
+const isNotArrowToken = eslintUtils.isNotArrowToken;
+exports.isNotArrowToken = isNotArrowToken;
+const isClosingBraceToken = eslintUtils.isClosingBraceToken;
+exports.isClosingBraceToken = isClosingBraceToken;
+const isNotClosingBraceToken = eslintUtils.isNotClosingBraceToken;
+exports.isNotClosingBraceToken = isNotClosingBraceToken;
+const isClosingBracketToken = eslintUtils.isClosingBracketToken;
+exports.isClosingBracketToken = isClosingBracketToken;
+const isNotClosingBracketToken = eslintUtils.isNotClosingBracketToken;
+exports.isNotClosingBracketToken = isNotClosingBracketToken;
+const isClosingParenToken = eslintUtils.isClosingParenToken;
+exports.isClosingParenToken = isClosingParenToken;
+const isNotClosingParenToken = eslintUtils.isNotClosingParenToken;
+exports.isNotClosingParenToken = isNotClosingParenToken;
+const isColonToken = eslintUtils.isColonToken;
+exports.isColonToken = isColonToken;
+const isNotColonToken = eslintUtils.isNotColonToken;
+exports.isNotColonToken = isNotColonToken;
+const isCommaToken = eslintUtils.isCommaToken;
+exports.isCommaToken = isCommaToken;
+const isNotCommaToken = eslintUtils.isNotCommaToken;
+exports.isNotCommaToken = isNotCommaToken;
+const isCommentToken = eslintUtils.isCommentToken;
+exports.isCommentToken = isCommentToken;
+const isNotCommentToken = eslintUtils.isNotCommentToken;
+exports.isNotCommentToken = isNotCommentToken;
+const isOpeningBraceToken = eslintUtils.isOpeningBraceToken;
+exports.isOpeningBraceToken = isOpeningBraceToken;
+const isNotOpeningBraceToken = eslintUtils.isNotOpeningBraceToken;
+exports.isNotOpeningBraceToken = isNotOpeningBraceToken;
+const isOpeningBracketToken = eslintUtils.isOpeningBracketToken;
+exports.isOpeningBracketToken = isOpeningBracketToken;
+const isNotOpeningBracketToken = eslintUtils.isNotOpeningBracketToken;
+exports.isNotOpeningBracketToken = isNotOpeningBracketToken;
+const isOpeningParenToken = eslintUtils.isOpeningParenToken;
+exports.isOpeningParenToken = isOpeningParenToken;
+const isNotOpeningParenToken = eslintUtils.isNotOpeningParenToken;
+exports.isNotOpeningParenToken = isNotOpeningParenToken;
+const isSemicolonToken = eslintUtils.isSemicolonToken;
+exports.isSemicolonToken = isSemicolonToken;
+const isNotSemicolonToken = eslintUtils.isNotSemicolonToken;
+exports.isNotSemicolonToken = isNotSemicolonToken;
 //# sourceMappingURL=predicates.js.map

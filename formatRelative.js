@@ -1,15 +1,10 @@
 "use strict";
 exports.formatRelative = void 0;
 
-const formatRelativeLocale = {
-  lastWeek: "eeee 'pase nan lè' p",
-  yesterday: "'yè nan lè' p",
-  today: "'jodi a' p",
-  tomorrow: "'demen nan lè' p'",
-  nextWeek: "eeee 'pwochen nan lè' p",
-  other: "P",
-};
+var _index = require("../formatRelative.js");
+var _index2 = require("./_lib/convertToFP.js"); // This file is generated automatically by `scripts/build/fp.ts`. Please, don't change it.
 
-const formatRelative = (token, _date, _baseDate, _options) =>
-  formatRelativeLocale[token];
-exports.formatRelative = formatRelative;
+const formatRelative = (exports.formatRelative = (0, _index2.convertToFP)(
+  _index.formatRelative,
+  2,
+));

@@ -1,160 +1,132 @@
+/**
+ * @fileoverview Rule to flag use of implied eval via setTimeout and setInterval
+ * @author James Allardice
+ */
+
 "use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-const utils_1 = require("@typescript-eslint/utils");
-const eslint_utils_1 = require("@typescript-eslint/utils/eslint-utils");
-const tsutils = __importStar(require("ts-api-utils"));
-const ts = __importStar(require("typescript"));
-const util_1 = require("../util");
-const FUNCTION_CONSTRUCTOR = 'Function';
-const GLOBAL_CANDIDATES = new Set(['global', 'window', 'globalThis']);
-const EVAL_LIKE_METHODS = new Set([
-    'setImmediate',
-    'setInterval',
-    'setTimeout',
-    'execScript',
-]);
-exports.default = (0, util_1.createRule)({
-    name: 'no-implied-eval',
+
+//------------------------------------------------------------------------------
+// Requirements
+//------------------------------------------------------------------------------
+
+const astUtils = require("./utils/ast-utils");
+const { getStaticValue } = require("@eslint-community/eslint-utils");
+
+//------------------------------------------------------------------------------
+// Rule Definition
+//------------------------------------------------------------------------------
+
+/** @type {import('../shared/types').Rule} */
+module.exports = {
     meta: {
+        type: "suggestion",
+
         docs: {
-            description: 'Disallow the use of `eval()`-like methods',
-            recommended: 'recommended',
-            extendsBaseRule: true,
-            requiresTypeChecking: true,
+            description: "Disallow the use of `eval()`-like methods",
+            recommended: false,
+            url: "https://eslint.org/docs/latest/rules/no-implied-eval"
         },
-        messages: {
-            noImpliedEvalError: 'Implied eval. Consider passing a function.',
-            noFunctionConstructor: 'Implied eval. Do not use the Function constructor to create functions.',
-        },
+
         schema: [],
-        type: 'suggestion',
-    },
-    defaultOptions: [],
-    create(context) {
-        const services = (0, util_1.getParserServices)(context);
-        const checker = services.program.getTypeChecker();
-        function getCalleeName(node) {
-            if (node.type === utils_1.AST_NODE_TYPES.Identifier) {
-                return node.name;
-            }
-            if (node.type === utils_1.AST_NODE_TYPES.MemberExpression &&
-                node.object.type === utils_1.AST_NODE_TYPES.Identifier &&
-                GLOBAL_CANDIDATES.has(node.object.name)) {
-                if (node.property.type === utils_1.AST_NODE_TYPES.Identifier) {
-                    return node.property.name;
-                }
-                if (node.property.type === utils_1.AST_NODE_TYPES.Literal &&
-                    typeof node.property.value === 'string') {
-                    return node.property.value;
-                }
-            }
-            return null;
+
+        messages: {
+            impliedEval: "Implied eval. Consider passing a function instead of a string."
         }
-        function isFunctionType(node) {
-            const type = services.getTypeAtLocation(node);
-            const symbol = type.getSymbol();
-            if (symbol &&
-                tsutils.isSymbolFlagSet(symbol, ts.SymbolFlags.Function | ts.SymbolFlags.Method)) {
+    },
+
+    create(context) {
+        const GLOBAL_CANDIDATES = Object.freeze(["global", "window", "globalThis"]);
+        const EVAL_LIKE_FUNC_PATTERN = /^(?:set(?:Interval|Timeout)|execScript)$/u;
+        const sourceCode = context.sourceCode;
+
+        /**
+         * Checks whether a node is evaluated as a string or not.
+         * @param {ASTNode} node A node to check.
+         * @returns {boolean} True if the node is evaluated as a string.
+         */
+        function isEvaluatedString(node) {
+            if (
+                (node.type === "Literal" && typeof node.value === "string") ||
+                node.type === "TemplateLiteral"
+            ) {
                 return true;
             }
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
-            if (symbol && symbol.escapedName === FUNCTION_CONSTRUCTOR) {
-                const declarations = symbol.getDeclarations() ?? [];
-                for (const declaration of declarations) {
-                    const sourceFile = declaration.getSourceFile();
-                    if (services.program.isSourceFileDefaultLibrary(sourceFile)) {
-                        return true;
+            if (node.type === "BinaryExpression" && node.operator === "+") {
+                return isEvaluatedString(node.left) || isEvaluatedString(node.right);
+            }
+            return false;
+        }
+
+        /**
+         * Reports if the `CallExpression` node has evaluated argument.
+         * @param {ASTNode} node A CallExpression to check.
+         * @returns {void}
+         */
+        function reportImpliedEvalCallExpression(node) {
+            const [firstArgument] = node.arguments;
+
+            if (firstArgument) {
+
+                const staticValue = getStaticValue(firstArgument, sourceCode.getScope(node));
+                const isStaticString = staticValue && typeof staticValue.value === "string";
+                const isString = isStaticString || isEvaluatedString(firstArgument);
+
+                if (isString) {
+                    context.report({
+                        node,
+                        messageId: "impliedEval"
+                    });
+                }
+            }
+
+        }
+
+        /**
+         * Reports calls of `implied eval` via the global references.
+         * @param {Variable} globalVar A global variable to check.
+         * @returns {void}
+         */
+        function reportImpliedEvalViaGlobal(globalVar) {
+            const { references, name } = globalVar;
+
+            references.forEach(ref => {
+                const identifier = ref.identifier;
+                let node = identifier.parent;
+
+                while (astUtils.isSpecificMemberAccess(node, null, name)) {
+                    node = node.parent;
+                }
+
+                if (astUtils.isSpecificMemberAccess(node, null, EVAL_LIKE_FUNC_PATTERN)) {
+                    const calleeNode = node.parent.type === "ChainExpression" ? node.parent : node;
+                    const parent = calleeNode.parent;
+
+                    if (parent.type === "CallExpression" && parent.callee === calleeNode) {
+                        reportImpliedEvalCallExpression(parent);
                     }
                 }
-            }
-            const signatures = checker.getSignaturesOfType(type, ts.SignatureKind.Call);
-            return signatures.length > 0;
+            });
         }
-        function isBind(node) {
-            return node.type === utils_1.AST_NODE_TYPES.MemberExpression
-                ? isBind(node.property)
-                : node.type === utils_1.AST_NODE_TYPES.Identifier && node.name === 'bind';
-        }
-        function isFunction(node) {
-            switch (node.type) {
-                case utils_1.AST_NODE_TYPES.ArrowFunctionExpression:
-                case utils_1.AST_NODE_TYPES.FunctionDeclaration:
-                case utils_1.AST_NODE_TYPES.FunctionExpression:
-                    return true;
-                case utils_1.AST_NODE_TYPES.Literal:
-                case utils_1.AST_NODE_TYPES.TemplateLiteral:
-                    return false;
-                case utils_1.AST_NODE_TYPES.CallExpression:
-                    return isBind(node.callee) || isFunctionType(node);
-                default:
-                    return isFunctionType(node);
-            }
-        }
-        function isReferenceToGlobalFunction(calleeName) {
-            const ref = (0, eslint_utils_1.getScope)(context).references.find(ref => ref.identifier.name === calleeName);
-            // ensure it's the "global" version
-            return !ref?.resolved || ref.resolved.defs.length === 0;
-        }
-        function checkImpliedEval(node) {
-            const calleeName = getCalleeName(node.callee);
-            if (calleeName == null) {
-                return;
-            }
-            if (calleeName === FUNCTION_CONSTRUCTOR) {
-                const type = services.getTypeAtLocation(node.callee);
-                const symbol = type.getSymbol();
-                if (symbol) {
-                    const declarations = symbol.getDeclarations() ?? [];
-                    for (const declaration of declarations) {
-                        const sourceFile = declaration.getSourceFile();
-                        if (services.program.isSourceFileDefaultLibrary(sourceFile)) {
-                            context.report({ node, messageId: 'noFunctionConstructor' });
-                            return;
-                        }
-                    }
-                }
-                else {
-                    context.report({ node, messageId: 'noFunctionConstructor' });
-                    return;
-                }
-            }
-            if (node.arguments.length === 0) {
-                return;
-            }
-            const [handler] = node.arguments;
-            if (EVAL_LIKE_METHODS.has(calleeName) &&
-                !isFunction(handler) &&
-                isReferenceToGlobalFunction(calleeName)) {
-                context.report({ node: handler, messageId: 'noImpliedEvalError' });
-            }
-        }
+
+        //--------------------------------------------------------------------------
+        // Public
+        //--------------------------------------------------------------------------
+
         return {
-            NewExpression: checkImpliedEval,
-            CallExpression: checkImpliedEval,
+            CallExpression(node) {
+                if (astUtils.isSpecificId(node.callee, EVAL_LIKE_FUNC_PATTERN)) {
+                    reportImpliedEvalCallExpression(node);
+                }
+            },
+            "Program:exit"(node) {
+                const globalScope = sourceCode.getScope(node);
+
+                GLOBAL_CANDIDATES
+                    .map(candidate => astUtils.getVariableByName(globalScope, candidate))
+                    .filter(globalVar => !!globalVar && globalVar.defs.length === 0)
+                    .forEach(reportImpliedEvalViaGlobal);
+            }
         };
-    },
-});
-//# sourceMappingURL=no-implied-eval.js.map
+
+    }
+};

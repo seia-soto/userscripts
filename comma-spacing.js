@@ -1,152 +1,192 @@
+/**
+ * @fileoverview Comma spacing - validates spacing before and after comma
+ * @author Vignesh Anand aka vegetableman.
+ * @deprecated in ESLint v8.53.0
+ */
 "use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-const utils_1 = require("@typescript-eslint/utils");
-const eslint_utils_1 = require("@typescript-eslint/utils/eslint-utils");
-const util_1 = require("../util");
-exports.default = (0, util_1.createRule)({
-    name: 'comma-spacing',
+
+const astUtils = require("./utils/ast-utils");
+
+//------------------------------------------------------------------------------
+// Rule Definition
+//------------------------------------------------------------------------------
+
+/** @type {import('../shared/types').Rule} */
+module.exports = {
     meta: {
         deprecated: true,
-        replacedBy: ['@stylistic/ts/comma-spacing'],
-        type: 'layout',
+        replacedBy: [],
+        type: "layout",
+
         docs: {
-            description: 'Enforce consistent spacing before and after commas',
-            extendsBaseRule: true,
+            description: "Enforce consistent spacing before and after commas",
+            recommended: false,
+            url: "https://eslint.org/docs/latest/rules/comma-spacing"
         },
-        fixable: 'whitespace',
+
+        fixable: "whitespace",
+
         schema: [
             {
-                type: 'object',
+                type: "object",
                 properties: {
                     before: {
-                        type: 'boolean',
-                        default: false,
+                        type: "boolean",
+                        default: false
                     },
                     after: {
-                        type: 'boolean',
-                        default: true,
-                    },
+                        type: "boolean",
+                        default: true
+                    }
                 },
-                additionalProperties: false,
-            },
+                additionalProperties: false
+            }
         ],
+
         messages: {
-            unexpected: `There should be no space {{loc}} ','.`,
-            missing: `A space is required {{loc}} ','.`,
-        },
+            missing: "A space is required {{loc}} ','.",
+            unexpected: "There should be no space {{loc}} ','."
+        }
     },
-    defaultOptions: [
-        {
-            before: false,
-            after: true,
-        },
-    ],
-    create(context, [{ before: spaceBefore, after: spaceAfter }]) {
-        const sourceCode = (0, eslint_utils_1.getSourceCode)(context);
+
+    create(context) {
+
+        const sourceCode = context.sourceCode;
         const tokensAndComments = sourceCode.tokensAndComments;
-        const ignoredTokens = new Set();
+
+        const options = {
+            before: context.options[0] ? context.options[0].before : false,
+            after: context.options[0] ? context.options[0].after : true
+        };
+
+        //--------------------------------------------------------------------------
+        // Helpers
+        //--------------------------------------------------------------------------
+
+        // list of comma tokens to ignore for the check of leading whitespace
+        const commaTokensToIgnore = [];
+
         /**
-         * Adds null elements of the ArrayExpression or ArrayPattern node to the ignore list
-         * @param node node to evaluate
+         * Reports a spacing error with an appropriate message.
+         * @param {ASTNode} node The binary expression node to report.
+         * @param {string} loc Is the error "before" or "after" the comma?
+         * @param {ASTNode} otherNode The node at the left or right of `node`
+         * @returns {void}
+         * @private
+         */
+        function report(node, loc, otherNode) {
+            context.report({
+                node,
+                fix(fixer) {
+                    if (options[loc]) {
+                        if (loc === "before") {
+                            return fixer.insertTextBefore(node, " ");
+                        }
+                        return fixer.insertTextAfter(node, " ");
+
+                    }
+                    let start, end;
+                    const newText = "";
+
+                    if (loc === "before") {
+                        start = otherNode.range[1];
+                        end = node.range[0];
+                    } else {
+                        start = node.range[1];
+                        end = otherNode.range[0];
+                    }
+
+                    return fixer.replaceTextRange([start, end], newText);
+
+                },
+                messageId: options[loc] ? "missing" : "unexpected",
+                data: {
+                    loc
+                }
+            });
+        }
+
+        /**
+         * Adds null elements of the given ArrayExpression or ArrayPattern node to the ignore list.
+         * @param {ASTNode} node An ArrayExpression or ArrayPattern node.
+         * @returns {void}
          */
         function addNullElementsToIgnoreList(node) {
             let previousToken = sourceCode.getFirstToken(node);
-            for (const element of node.elements) {
+
+            node.elements.forEach(element => {
                 let token;
-                if (element == null) {
+
+                if (element === null) {
                     token = sourceCode.getTokenAfter(previousToken);
-                    if (token && (0, util_1.isCommaToken)(token)) {
-                        ignoredTokens.add(token);
+
+                    if (astUtils.isCommaToken(token)) {
+                        commaTokensToIgnore.push(token);
                     }
-                }
-                else {
+                } else {
                     token = sourceCode.getTokenAfter(element);
                 }
+
                 previousToken = token;
-            }
+            });
         }
-        /**
-         * Adds type parameters trailing comma token to the ignore list
-         * @param node node to evaluate
-         */
-        function addTypeParametersTrailingCommaToIgnoreList(node) {
-            const paramLength = node.params.length;
-            if (paramLength) {
-                const param = node.params[paramLength - 1];
-                const afterToken = sourceCode.getTokenAfter(param);
-                if (afterToken && (0, util_1.isCommaToken)(afterToken)) {
-                    ignoredTokens.add(afterToken);
-                }
-            }
-        }
-        /**
-         * Validates the spacing around a comma token.
-         * @param commaToken The token representing the comma
-         * @param prevToken The last token before the comma
-         * @param nextToken The first token after the comma
-         */
-        function validateCommaSpacing(commaToken, prevToken, nextToken) {
-            if (prevToken &&
-                (0, util_1.isTokenOnSameLine)(prevToken, commaToken) &&
-                // eslint-disable-next-line deprecation/deprecation -- TODO - switch once our min ESLint version is 6.7.0
-                spaceBefore !== sourceCode.isSpaceBetweenTokens(prevToken, commaToken)) {
-                context.report({
-                    node: commaToken,
-                    data: {
-                        loc: 'before',
-                    },
-                    messageId: spaceBefore ? 'missing' : 'unexpected',
-                    fix: fixer => spaceBefore
-                        ? fixer.insertTextBefore(commaToken, ' ')
-                        : fixer.replaceTextRange([prevToken.range[1], commaToken.range[0]], ''),
-                });
-            }
-            if (nextToken && (0, util_1.isClosingParenToken)(nextToken)) {
-                return;
-            }
-            if (spaceAfter &&
-                nextToken &&
-                ((0, util_1.isClosingBraceToken)(nextToken) || (0, util_1.isClosingBracketToken)(nextToken))) {
-                return;
-            }
-            if (!spaceAfter && nextToken && nextToken.type === utils_1.AST_TOKEN_TYPES.Line) {
-                return;
-            }
-            if (nextToken &&
-                (0, util_1.isTokenOnSameLine)(commaToken, nextToken) &&
-                // eslint-disable-next-line deprecation/deprecation -- TODO - switch once our min ESLint version is 6.7.0
-                spaceAfter !== sourceCode.isSpaceBetweenTokens(commaToken, nextToken)) {
-                context.report({
-                    node: commaToken,
-                    data: {
-                        loc: 'after',
-                    },
-                    messageId: spaceAfter ? 'missing' : 'unexpected',
-                    fix: fixer => spaceAfter
-                        ? fixer.insertTextAfter(commaToken, ' ')
-                        : fixer.replaceTextRange([commaToken.range[1], nextToken.range[0]], ''),
-                });
-            }
-        }
+
+        //--------------------------------------------------------------------------
+        // Public
+        //--------------------------------------------------------------------------
+
         return {
-            TSTypeParameterDeclaration: addTypeParametersTrailingCommaToIgnoreList,
-            ArrayExpression: addNullElementsToIgnoreList,
-            ArrayPattern: addNullElementsToIgnoreList,
-            'Program:exit'() {
+            "Program:exit"() {
                 tokensAndComments.forEach((token, i) => {
-                    if (!(0, util_1.isCommaToken)(token)) {
+
+                    if (!astUtils.isCommaToken(token)) {
                         return;
                     }
-                    const prevToken = tokensAndComments[i - 1];
-                    const nextToken = tokensAndComments.at(i + 1);
-                    validateCommaSpacing(token, (0, util_1.isCommaToken)(prevToken) || ignoredTokens.has(token)
-                        ? null
-                        : prevToken, (nextToken && (0, util_1.isCommaToken)(nextToken)) || ignoredTokens.has(token)
-                        ? null
-                        : nextToken ?? null);
+
+                    const previousToken = tokensAndComments[i - 1];
+                    const nextToken = tokensAndComments[i + 1];
+
+                    if (
+                        previousToken &&
+                        !astUtils.isCommaToken(previousToken) && // ignore spacing between two commas
+
+                        /*
+                         * `commaTokensToIgnore` are ending commas of `null` elements (array holes/elisions).
+                         * In addition to spacing between two commas, this can also ignore:
+                         *
+                         *   - Spacing after `[` (controlled by array-bracket-spacing)
+                         *       Example: [ , ]
+                         *                 ^
+                         *   - Spacing after a comment (for backwards compatibility, this was possibly unintentional)
+                         *       Example: [a, /* * / ,]
+                         *                          ^
+                         */
+                        !commaTokensToIgnore.includes(token) &&
+
+                        astUtils.isTokenOnSameLine(previousToken, token) &&
+                        options.before !== sourceCode.isSpaceBetweenTokens(previousToken, token)
+                    ) {
+                        report(token, "before", previousToken);
+                    }
+
+                    if (
+                        nextToken &&
+                        !astUtils.isCommaToken(nextToken) && // ignore spacing between two commas
+                        !astUtils.isClosingParenToken(nextToken) && // controlled by space-in-parens
+                        !astUtils.isClosingBracketToken(nextToken) && // controlled by array-bracket-spacing
+                        !astUtils.isClosingBraceToken(nextToken) && // controlled by object-curly-spacing
+                        !(!options.after && nextToken.type === "Line") && // special case, allow space before line comment
+                        astUtils.isTokenOnSameLine(token, nextToken) &&
+                        options.after !== sourceCode.isSpaceBetweenTokens(token, nextToken)
+                    ) {
+                        report(token, "after", nextToken);
+                    }
                 });
             },
+            ArrayExpression: addNullElementsToIgnoreList,
+            ArrayPattern: addNullElementsToIgnoreList
+
         };
-    },
-});
-//# sourceMappingURL=comma-spacing.js.map
+
+    }
+};

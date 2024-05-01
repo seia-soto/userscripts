@@ -1,172 +1,136 @@
+/**
+ * @fileoverview Rule to flag when the same variable is declared more then once.
+ * @author Ilya Volodin
+ */
+
 "use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-const scope_manager_1 = require("@typescript-eslint/scope-manager");
-const utils_1 = require("@typescript-eslint/utils");
-const eslint_utils_1 = require("@typescript-eslint/utils/eslint-utils");
-const util_1 = require("../util");
-exports.default = (0, util_1.createRule)({
-    name: 'no-redeclare',
+
+//------------------------------------------------------------------------------
+// Requirements
+//------------------------------------------------------------------------------
+
+const astUtils = require("./utils/ast-utils");
+
+//------------------------------------------------------------------------------
+// Rule Definition
+//------------------------------------------------------------------------------
+
+/** @type {import('../shared/types').Rule} */
+module.exports = {
     meta: {
-        type: 'suggestion',
+        type: "suggestion",
+
         docs: {
-            description: 'Disallow variable redeclaration',
-            extendsBaseRule: true,
+            description: "Disallow variable redeclaration",
+            recommended: true,
+            url: "https://eslint.org/docs/latest/rules/no-redeclare"
         },
-        schema: [
-            {
-                type: 'object',
-                properties: {
-                    builtinGlobals: {
-                        type: 'boolean',
-                    },
-                    ignoreDeclarationMerge: {
-                        type: 'boolean',
-                    },
-                },
-                additionalProperties: false,
-            },
-        ],
+
         messages: {
             redeclared: "'{{id}}' is already defined.",
             redeclaredAsBuiltin: "'{{id}}' is already defined as a built-in global variable.",
-            redeclaredBySyntax: "'{{id}}' is already defined by a variable declaration.",
+            redeclaredBySyntax: "'{{id}}' is already defined by a variable declaration."
         },
-    },
-    defaultOptions: [
-        {
-            builtinGlobals: true,
-            ignoreDeclarationMerge: true,
-        },
-    ],
-    create(context, [options]) {
-        const sourceCode = (0, eslint_utils_1.getSourceCode)(context);
-        const CLASS_DECLARATION_MERGE_NODES = new Set([
-            utils_1.AST_NODE_TYPES.TSInterfaceDeclaration,
-            utils_1.AST_NODE_TYPES.TSModuleDeclaration,
-            utils_1.AST_NODE_TYPES.ClassDeclaration,
-        ]);
-        const FUNCTION_DECLARATION_MERGE_NODES = new Set([
-            utils_1.AST_NODE_TYPES.TSModuleDeclaration,
-            utils_1.AST_NODE_TYPES.FunctionDeclaration,
-        ]);
-        const ENUM_DECLARATION_MERGE_NODES = new Set([
-            utils_1.AST_NODE_TYPES.TSEnumDeclaration,
-            utils_1.AST_NODE_TYPES.TSModuleDeclaration,
-        ]);
-        function* iterateDeclarations(variable) {
-            if (options.builtinGlobals &&
-                'eslintImplicitGlobalSetting' in variable &&
-                (variable.eslintImplicitGlobalSetting === 'readonly' ||
-                    variable.eslintImplicitGlobalSetting === 'writable')) {
-                yield { type: 'builtin' };
+
+        schema: [
+            {
+                type: "object",
+                properties: {
+                    builtinGlobals: { type: "boolean", default: true }
+                },
+                additionalProperties: false
             }
-            if ('eslintExplicitGlobalComments' in variable &&
-                variable.eslintExplicitGlobalComments) {
+        ]
+    },
+
+    create(context) {
+        const options = {
+            builtinGlobals: Boolean(
+                context.options.length === 0 ||
+                context.options[0].builtinGlobals
+            )
+        };
+        const sourceCode = context.sourceCode;
+
+        /**
+         * Iterate declarations of a given variable.
+         * @param {escope.variable} variable The variable object to iterate declarations.
+         * @returns {IterableIterator<{type:string,node:ASTNode,loc:SourceLocation}>} The declarations.
+         */
+        function *iterateDeclarations(variable) {
+            if (options.builtinGlobals && (
+                variable.eslintImplicitGlobalSetting === "readonly" ||
+                variable.eslintImplicitGlobalSetting === "writable"
+            )) {
+                yield { type: "builtin" };
+            }
+
+            for (const id of variable.identifiers) {
+                yield { type: "syntax", node: id, loc: id.loc };
+            }
+
+            if (variable.eslintExplicitGlobalComments) {
                 for (const comment of variable.eslintExplicitGlobalComments) {
                     yield {
-                        type: 'comment',
+                        type: "comment",
                         node: comment,
-                        loc: (0, util_1.getNameLocationInGlobalDirectiveComment)(sourceCode, comment, variable.name),
+                        loc: astUtils.getNameLocationInGlobalDirectiveComment(
+                            sourceCode,
+                            comment,
+                            variable.name
+                        )
                     };
                 }
             }
-            const identifiers = variable.identifiers
-                .map(id => ({
-                identifier: id,
-                parent: id.parent,
-            }))
-                // ignore function declarations because TS will treat them as an overload
-                .filter(({ parent }) => parent.type !== utils_1.AST_NODE_TYPES.TSDeclareFunction);
-            if (options.ignoreDeclarationMerge && identifiers.length > 1) {
-                if (
-                // interfaces merging
-                identifiers.every(({ parent }) => parent.type === utils_1.AST_NODE_TYPES.TSInterfaceDeclaration)) {
-                    return;
-                }
-                if (
-                // namespace/module merging
-                identifiers.every(({ parent }) => parent.type === utils_1.AST_NODE_TYPES.TSModuleDeclaration)) {
-                    return;
-                }
-                if (
-                // class + interface/namespace merging
-                identifiers.every(({ parent }) => CLASS_DECLARATION_MERGE_NODES.has(parent.type))) {
-                    const classDecls = identifiers.filter(({ parent }) => parent.type === utils_1.AST_NODE_TYPES.ClassDeclaration);
-                    if (classDecls.length === 1) {
-                        // safe declaration merging
-                        return;
-                    }
-                    // there's more than one class declaration, which needs to be reported
-                    for (const { identifier } of classDecls) {
-                        yield { type: 'syntax', node: identifier, loc: identifier.loc };
-                    }
-                    return;
-                }
-                if (
-                // class + interface/namespace merging
-                identifiers.every(({ parent }) => FUNCTION_DECLARATION_MERGE_NODES.has(parent.type))) {
-                    const functionDecls = identifiers.filter(({ parent }) => parent.type === utils_1.AST_NODE_TYPES.FunctionDeclaration);
-                    if (functionDecls.length === 1) {
-                        // safe declaration merging
-                        return;
-                    }
-                    // there's more than one function declaration, which needs to be reported
-                    for (const { identifier } of functionDecls) {
-                        yield { type: 'syntax', node: identifier, loc: identifier.loc };
-                    }
-                    return;
-                }
-                if (
-                // enum + namespace merging
-                identifiers.every(({ parent }) => ENUM_DECLARATION_MERGE_NODES.has(parent.type))) {
-                    const enumDecls = identifiers.filter(({ parent }) => parent.type === utils_1.AST_NODE_TYPES.TSEnumDeclaration);
-                    if (enumDecls.length === 1) {
-                        // safe declaration merging
-                        return;
-                    }
-                    // there's more than one enum declaration, which needs to be reported
-                    for (const { identifier } of enumDecls) {
-                        yield { type: 'syntax', node: identifier, loc: identifier.loc };
-                    }
-                    return;
-                }
-            }
-            for (const { identifier } of identifiers) {
-                yield { type: 'syntax', node: identifier, loc: identifier.loc };
-            }
         }
+
+        /**
+         * Find variables in a given scope and flag redeclared ones.
+         * @param {Scope} scope An eslint-scope scope object.
+         * @returns {void}
+         * @private
+         */
         function findVariablesInScope(scope) {
             for (const variable of scope.variables) {
-                const [declaration, ...extraDeclarations] = iterateDeclarations(variable);
+                const [
+                    declaration,
+                    ...extraDeclarations
+                ] = iterateDeclarations(variable);
+
                 if (extraDeclarations.length === 0) {
                     continue;
                 }
+
                 /*
                  * If the type of a declaration is different from the type of
                  * the first declaration, it shows the location of the first
                  * declaration.
                  */
-                const detailMessageId = declaration.type === 'builtin'
-                    ? 'redeclaredAsBuiltin'
-                    : 'redeclaredBySyntax';
+                const detailMessageId = declaration.type === "builtin"
+                    ? "redeclaredAsBuiltin"
+                    : "redeclaredBySyntax";
                 const data = { id: variable.name };
+
                 // Report extra declarations.
                 for (const { type, node, loc } of extraDeclarations) {
-                    const messageId = type === declaration.type ? 'redeclared' : detailMessageId;
-                    if (node) {
-                        context.report({ node, loc, messageId, data });
-                    }
-                    else if (loc) {
-                        context.report({ loc, messageId, data });
-                    }
+                    const messageId = type === declaration.type
+                        ? "redeclared"
+                        : detailMessageId;
+
+                    context.report({ node, loc, messageId, data });
                 }
             }
         }
+
         /**
          * Find variables in the current scope.
+         * @param {ASTNode} node The node of the current scope.
+         * @returns {void}
+         * @private
          */
         function checkForBlock(node) {
-            const scope = (0, eslint_utils_1.getScope)(context);
+            const scope = sourceCode.getScope(node);
+
             /*
              * In ES5, some node type such as `BlockStatement` doesn't have that scope.
              * `scope.block` is a different node in such a case.
@@ -175,27 +139,36 @@ exports.default = (0, util_1.createRule)({
                 findVariablesInScope(scope);
             }
         }
+
         return {
-            Program() {
-                const scope = (0, eslint_utils_1.getScope)(context);
+            Program(node) {
+                const scope = sourceCode.getScope(node);
+
                 findVariablesInScope(scope);
+
                 // Node.js or ES modules has a special scope.
-                if (scope.type === scope_manager_1.ScopeType.global &&
+                if (
+                    scope.type === "global" &&
                     scope.childScopes[0] &&
+
                     // The special scope's block is the Program node.
-                    scope.block === scope.childScopes[0].block) {
+                    scope.block === scope.childScopes[0].block
+                ) {
                     findVariablesInScope(scope.childScopes[0]);
                 }
             },
+
             FunctionDeclaration: checkForBlock,
             FunctionExpression: checkForBlock,
             ArrowFunctionExpression: checkForBlock,
+
+            StaticBlock: checkForBlock,
+
             BlockStatement: checkForBlock,
             ForStatement: checkForBlock,
             ForInStatement: checkForBlock,
             ForOfStatement: checkForBlock,
-            SwitchStatement: checkForBlock,
+            SwitchStatement: checkForBlock
         };
-    },
-});
-//# sourceMappingURL=no-redeclare.js.map
+    }
+};

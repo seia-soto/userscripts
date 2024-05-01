@@ -1,26 +1,10 @@
 "use strict";
-exports.isFriday = isFriday;
-var _index = require("./toDate.js");
+exports.isFriday = void 0;
 
-/**
- * @name isFriday
- * @category Weekday Helpers
- * @summary Is the given date Friday?
- *
- * @description
- * Is the given date Friday?
- *
- * @typeParam DateType - The `Date` type, the function operates on. Gets inferred from passed arguments. Allows to use extensions like [`UTCDate`](https://github.com/date-fns/utc).
- *
- * @param date - The date to check
- *
- * @returns The date is Friday
- *
- * @example
- * // Is 26 September 2014 Friday?
- * const result = isFriday(new Date(2014, 8, 26))
- * //=> true
- */
-function isFriday(date) {
-  return (0, _index.toDate)(date).getDay() === 5;
-}
+var _index = require("../isFriday.js");
+var _index2 = require("./_lib/convertToFP.js"); // This file is generated automatically by `scripts/build/fp.ts`. Please, don't change it.
+
+const isFriday = (exports.isFriday = (0, _index2.convertToFP)(
+  _index.isFriday,
+  1,
+));

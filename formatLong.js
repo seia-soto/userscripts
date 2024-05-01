@@ -6,7 +6,7 @@ const dateFormats = {
   full: "EEEE d MMMM y",
   long: "d MMMM y",
   medium: "d MMM y",
-  short: "dd/MM/y",
+  short: "dd-MM-y",
 };
 
 const timeFormats = {
@@ -17,8 +17,8 @@ const timeFormats = {
 };
 
 const dateTimeFormats = {
-  full: "{{date}} 'nan lè' {{time}}",
-  long: "{{date}} 'nan lè' {{time}}",
+  full: "{{date}} 'om' {{time}}",
+  long: "{{date}} 'om' {{time}}",
   medium: "{{date}}, {{time}}",
   short: "{{date}}, {{time}}",
 };

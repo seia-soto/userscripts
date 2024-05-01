@@ -1,3 +1,6 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.unescape = void 0;
 /**
  * Un-escape a string that has been escaped with {@link escape}.
  *
@@ -12,9 +15,10 @@
  * Slashes (and backslashes in `windowsPathsNoEscape` mode) cannot be escaped
  * or unescaped.
  */
-export const unescape = (s, { windowsPathsNoEscape = false, } = {}) => {
+const unescape = (s, { windowsPathsNoEscape = false, } = {}) => {
     return windowsPathsNoEscape
         ? s.replace(/\[([^\/\\])\]/g, '$1')
         : s.replace(/((?!\\).|^)\[([^\/\\])\]/g, '$1$2').replace(/\\([^\/])/g, '$1');
 };
+exports.unescape = unescape;
 //# sourceMappingURL=unescape.js.map

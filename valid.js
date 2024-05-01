@@ -1,6 +1,11 @@
-const parse = require('./parse')
-const valid = (version, options) => {
-  const v = parse(version, options)
-  return v ? v.version : null
+const Range = require('../classes/range')
+const validRange = (range, options) => {
+  try {
+    // Return '*' instead of '' so that truthiness works.
+    // This will throw if it's invalid anyway
+    return new Range(range, options).range || '*'
+  } catch (er) {
+    return null
+  }
 }
-module.exports = valid
+module.exports = validRange

@@ -28,6 +28,7 @@ jobs:
           pnpm install
           pnpm -r bundle --minify
           pnpm -r compile --minify
+          find ./ -name "*.txt" -type f -exec sed -i 's/\n$//g' {} \;
           find ./ -name "*.js" -type f -exec cp {} ./pages \;
           find ./ -name "*.filters.txt" -type f -exec cp {} ./pages \;
           find ./ -name "*.hosts.txt" -type f -exec cp {} ./pages \;

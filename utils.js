@@ -1,171 +1,64 @@
-"use strict";
-exports.dayPeriodEnumToHours = dayPeriodEnumToHours;
-exports.isLeapYearIndex = isLeapYearIndex;
-exports.mapValue = mapValue;
-exports.normalizeTwoDigitYear = normalizeTwoDigitYear;
-exports.parseAnyDigitsSigned = parseAnyDigitsSigned;
-exports.parseNDigits = parseNDigits;
-exports.parseNDigitsSigned = parseNDigitsSigned;
-exports.parseNumericPattern = parseNumericPattern;
-exports.parseTimezonePattern = parseTimezonePattern;
-var _index = require("../../constants.js");
+'use strict';
 
-var _constants = require("./constants.js");
+const path = require('path');
+const win32 = process.platform === 'win32';
+const {
+  REGEX_BACKSLASH,
+  REGEX_REMOVE_BACKSLASH,
+  REGEX_SPECIAL_CHARS,
+  REGEX_SPECIAL_CHARS_GLOBAL
+} = require('./constants');
 
-function mapValue(parseFnResult, mapFn) {
-  if (!parseFnResult) {
-    return parseFnResult;
+exports.isObject = val => val !== null && typeof val === 'object' && !Array.isArray(val);
+exports.hasRegexChars = str => REGEX_SPECIAL_CHARS.test(str);
+exports.isRegexChar = str => str.length === 1 && exports.hasRegexChars(str);
+exports.escapeRegex = str => str.replace(REGEX_SPECIAL_CHARS_GLOBAL, '\\$1');
+exports.toPosixSlashes = str => str.replace(REGEX_BACKSLASH, '/');
+
+exports.removeBackslashes = str => {
+  return str.replace(REGEX_REMOVE_BACKSLASH, match => {
+    return match === '\\' ? '' : match;
+  });
+};
+
+exports.supportsLookbehinds = () => {
+  const segs = process.version.slice(1).split('.').map(Number);
+  if (segs.length === 3 && segs[0] >= 9 || (segs[0] === 8 && segs[1] >= 10)) {
+    return true;
   }
+  return false;
+};
 
-  return {
-    value: mapFn(parseFnResult.value),
-    rest: parseFnResult.rest,
-  };
-}
-
-function parseNumericPattern(pattern, dateString) {
-  const matchResult = dateString.match(pattern);
-
-  if (!matchResult) {
-    return null;
+exports.isWindows = options => {
+  if (options && typeof options.windows === 'boolean') {
+    return options.windows;
   }
+  return win32 === true || path.sep === '\\';
+};
 
-  return {
-    value: parseInt(matchResult[0], 10),
-    rest: dateString.slice(matchResult[0].length),
-  };
-}
+exports.escapeLast = (input, char, lastIdx) => {
+  const idx = input.lastIndexOf(char, lastIdx);
+  if (idx === -1) return input;
+  if (input[idx - 1] === '\\') return exports.escapeLast(input, char, idx - 1);
+  return `${input.slice(0, idx)}\\${input.slice(idx)}`;
+};
 
-function parseTimezonePattern(pattern, dateString) {
-  const matchResult = dateString.match(pattern);
-
-  if (!matchResult) {
-    return null;
+exports.removePrefix = (input, state = {}) => {
+  let output = input;
+  if (output.startsWith('./')) {
+    output = output.slice(2);
+    state.prefix = './';
   }
+  return output;
+};
 
-  // Input is 'Z'
-  if (matchResult[0] === "Z") {
-    return {
-      value: 0,
-      rest: dateString.slice(1),
-    };
+exports.wrapOutput = (input, state = {}, options = {}) => {
+  const prepend = options.contains ? '' : '^';
+  const append = options.contains ? '' : '$';
+
+  let output = `${prepend}(?:${input})${append}`;
+  if (state.negated === true) {
+    output = `(?:^(?!${output}).*$)`;
   }
-
-  const sign = matchResult[1] === "+" ? 1 : -1;
-  const hours = matchResult[2] ? parseInt(matchResult[2], 10) : 0;
-  const minutes = matchResult[3] ? parseInt(matchResult[3], 10) : 0;
-  const seconds = matchResult[5] ? parseInt(matchResult[5], 10) : 0;
-
-  return {
-    value:
-      sign *
-      (hours * _index.millisecondsInHour +
-        minutes * _index.millisecondsInMinute +
-        seconds * _index.millisecondsInSecond),
-    rest: dateString.slice(matchResult[0].length),
-  };
-}
-
-function parseAnyDigitsSigned(dateString) {
-  return parseNumericPattern(
-    _constants.numericPatterns.anyDigitsSigned,
-    dateString,
-  );
-}
-
-function parseNDigits(n, dateString) {
-  switch (n) {
-    case 1:
-      return parseNumericPattern(
-        _constants.numericPatterns.singleDigit,
-        dateString,
-      );
-    case 2:
-      return parseNumericPattern(
-        _constants.numericPatterns.twoDigits,
-        dateString,
-      );
-    case 3:
-      return parseNumericPattern(
-        _constants.numericPatterns.threeDigits,
-        dateString,
-      );
-    case 4:
-      return parseNumericPattern(
-        _constants.numericPatterns.fourDigits,
-        dateString,
-      );
-    default:
-      return parseNumericPattern(new RegExp("^\\d{1," + n + "}"), dateString);
-  }
-}
-
-function parseNDigitsSigned(n, dateString) {
-  switch (n) {
-    case 1:
-      return parseNumericPattern(
-        _constants.numericPatterns.singleDigitSigned,
-        dateString,
-      );
-    case 2:
-      return parseNumericPattern(
-        _constants.numericPatterns.twoDigitsSigned,
-        dateString,
-      );
-    case 3:
-      return parseNumericPattern(
-        _constants.numericPatterns.threeDigitsSigned,
-        dateString,
-      );
-    case 4:
-      return parseNumericPattern(
-        _constants.numericPatterns.fourDigitsSigned,
-        dateString,
-      );
-    default:
-      return parseNumericPattern(new RegExp("^-?\\d{1," + n + "}"), dateString);
-  }
-}
-
-function dayPeriodEnumToHours(dayPeriod) {
-  switch (dayPeriod) {
-    case "morning":
-      return 4;
-    case "evening":
-      return 17;
-    case "pm":
-    case "noon":
-    case "afternoon":
-      return 12;
-    case "am":
-    case "midnight":
-    case "night":
-    default:
-      return 0;
-  }
-}
-
-function normalizeTwoDigitYear(twoDigitYear, currentYear) {
-  const isCommonEra = currentYear > 0;
-  // Absolute number of the current year:
-  // 1 -> 1 AC
-  // 0 -> 1 BC
-  // -1 -> 2 BC
-  const absCurrentYear = isCommonEra ? currentYear : 1 - currentYear;
-
-  let result;
-  if (absCurrentYear <= 50) {
-    result = twoDigitYear || 100;
-  } else {
-    const rangeEnd = absCurrentYear + 50;
-    const rangeEndCentury = Math.trunc(rangeEnd / 100) * 100;
-    const isPreviousCentury = twoDigitYear >= rangeEnd % 100;
-    result = twoDigitYear + rangeEndCentury - (isPreviousCentury ? 100 : 0);
-  }
-
-  return isCommonEra ? result : 1 - result;
-}
-
-function isLeapYearIndex(year) {
-  return year % 400 === 0 || (year % 4 === 0 && year % 100 !== 0);
-}
+  return output;
+};

@@ -10,7 +10,3 @@ In the last changes, we require you to import the following files to your ad-blo
 
 - [asdefuser.filters.txt](./asdefuser.filters.txt) (<a download href='./asdefuser.filters.js'>Download</a>)
 - [asdefuser.hosts.txt](./asdefuser.hosts.txt) (<a download href='./asdefuser.hosts.js'>Download</a>)
-
-### dudefuser
-
-- [Install dudefuser.user.js](./dudefuser.user.js) (<a download href='./dudefuser.user.js'>Download</a>)

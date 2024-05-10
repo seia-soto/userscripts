@@ -6,7 +6,7 @@
   "scripts": {
     "build": "esbuild src/index.ts --bundle --define:global=window --inject:./esbuild.inject.ts --target=es2018,chrome68,safari13,firefox88",
     "bundle": "pnpm build --outfile=./out/asdefuser.js",
-    "compile": "pnpm build --banner:js=\"$(cat ./banner.txt)\" --outfile=./out/asdefuser.user.js"
+    "compile": "cat ./banner.txt ./out/asdefuser.js > ./out/asdefuser.user.js"
   },
   "keywords": [],
   "author": "HoJeong Go <seia@outlook.kr>",

@@ -1,150 +1,91 @@
-'use strict';
-module.exports = function generate_format(it, $keyword, $ruleType) {
-  var out = ' ';
-  var $lvl = it.level;
-  var $dataLvl = it.dataLevel;
-  var $schema = it.schema[$keyword];
-  var $schemaPath = it.schemaPath + it.util.getProperty($keyword);
-  var $errSchemaPath = it.errSchemaPath + '/' + $keyword;
-  var $breakOnError = !it.opts.allErrors;
-  var $data = 'data' + ($dataLvl || '');
-  if (it.opts.format === false) {
-    if ($breakOnError) {
-      out += ' if (true) { ';
-    }
-    return out;
-  }
-  var $isData = it.opts.$data && $schema && $schema.$data,
-    $schemaValue;
-  if ($isData) {
-    out += ' var schema' + ($lvl) + ' = ' + (it.util.getData($schema.$data, $dataLvl, it.dataPathArr)) + '; ';
-    $schemaValue = 'schema' + $lvl;
-  } else {
-    $schemaValue = $schema;
-  }
-  var $unknownFormats = it.opts.unknownFormats,
-    $allowUnknown = Array.isArray($unknownFormats);
-  if ($isData) {
-    var $format = 'format' + $lvl,
-      $isObject = 'isObject' + $lvl,
-      $formatType = 'formatType' + $lvl;
-    out += ' var ' + ($format) + ' = formats[' + ($schemaValue) + ']; var ' + ($isObject) + ' = typeof ' + ($format) + ' == \'object\' && !(' + ($format) + ' instanceof RegExp) && ' + ($format) + '.validate; var ' + ($formatType) + ' = ' + ($isObject) + ' && ' + ($format) + '.type || \'string\'; if (' + ($isObject) + ') { ';
-    if (it.async) {
-      out += ' var async' + ($lvl) + ' = ' + ($format) + '.async; ';
-    }
-    out += ' ' + ($format) + ' = ' + ($format) + '.validate; } if (  ';
-    if ($isData) {
-      out += ' (' + ($schemaValue) + ' !== undefined && typeof ' + ($schemaValue) + ' != \'string\') || ';
-    }
-    out += ' (';
-    if ($unknownFormats != 'ignore') {
-      out += ' (' + ($schemaValue) + ' && !' + ($format) + ' ';
-      if ($allowUnknown) {
-        out += ' && self._opts.unknownFormats.indexOf(' + ($schemaValue) + ') == -1 ';
-      }
-      out += ') || ';
-    }
-    out += ' (' + ($format) + ' && ' + ($formatType) + ' == \'' + ($ruleType) + '\' && !(typeof ' + ($format) + ' == \'function\' ? ';
-    if (it.async) {
-      out += ' (async' + ($lvl) + ' ? await ' + ($format) + '(' + ($data) + ') : ' + ($format) + '(' + ($data) + ')) ';
-    } else {
-      out += ' ' + ($format) + '(' + ($data) + ') ';
-    }
-    out += ' : ' + ($format) + '.test(' + ($data) + '))))) {';
-  } else {
-    var $format = it.formats[$schema];
-    if (!$format) {
-      if ($unknownFormats == 'ignore') {
-        it.logger.warn('unknown format "' + $schema + '" ignored in schema at path "' + it.errSchemaPath + '"');
-        if ($breakOnError) {
-          out += ' if (true) { ';
-        }
-        return out;
-      } else if ($allowUnknown && $unknownFormats.indexOf($schema) >= 0) {
-        if ($breakOnError) {
-          out += ' if (true) { ';
-        }
-        return out;
-      } else {
-        throw new Error('unknown format "' + $schema + '" is used in schema at path "' + it.errSchemaPath + '"');
-      }
-    }
-    var $isObject = typeof $format == 'object' && !($format instanceof RegExp) && $format.validate;
-    var $formatType = $isObject && $format.type || 'string';
-    if ($isObject) {
-      var $async = $format.async === true;
-      $format = $format.validate;
-    }
-    if ($formatType != $ruleType) {
-      if ($breakOnError) {
-        out += ' if (true) { ';
-      }
-      return out;
-    }
-    if ($async) {
-      if (!it.async) throw new Error('async format in sync schema');
-      var $formatRef = 'formats' + it.util.getProperty($schema) + '.validate';
-      out += ' if (!(await ' + ($formatRef) + '(' + ($data) + '))) { ';
-    } else {
-      out += ' if (! ';
-      var $formatRef = 'formats' + it.util.getProperty($schema);
-      if ($isObject) $formatRef += '.validate';
-      if (typeof $format == 'function') {
-        out += ' ' + ($formatRef) + '(' + ($data) + ') ';
-      } else {
-        out += ' ' + ($formatRef) + '.test(' + ($data) + ') ';
-      }
-      out += ') { ';
-    }
-  }
-  var $$outStack = $$outStack || [];
-  $$outStack.push(out);
-  out = ''; /* istanbul ignore else */
-  if (it.createErrors !== false) {
-    out += ' { keyword: \'' + ('format') + '\' , dataPath: (dataPath || \'\') + ' + (it.errorPath) + ' , schemaPath: ' + (it.util.toQuotedString($errSchemaPath)) + ' , params: { format:  ';
-    if ($isData) {
-      out += '' + ($schemaValue);
-    } else {
-      out += '' + (it.util.toQuotedString($schema));
-    }
-    out += '  } ';
-    if (it.opts.messages !== false) {
-      out += ' , message: \'should match format "';
-      if ($isData) {
-        out += '\' + ' + ($schemaValue) + ' + \'';
-      } else {
-        out += '' + (it.util.escapeQuotes($schema));
-      }
-      out += '"\' ';
-    }
-    if (it.opts.verbose) {
-      out += ' , schema:  ';
-      if ($isData) {
-        out += 'validate.schema' + ($schemaPath);
-      } else {
-        out += '' + (it.util.toQuotedString($schema));
-      }
-      out += '         , parentSchema: validate.schema' + (it.schemaPath) + ' , data: ' + ($data) + ' ';
-    }
-    out += ' } ';
-  } else {
-    out += ' {} ';
-  }
-  var __err = out;
-  out = $$outStack.pop();
-  if (!it.compositeRule && $breakOnError) {
-    /* istanbul ignore if */
-    if (it.async) {
-      out += ' throw new ValidationError([' + (__err) + ']); ';
-    } else {
-      out += ' validate.errors = [' + (__err) + ']; return false; ';
-    }
-  } else {
-    out += ' var err = ' + (__err) + ';  if (vErrors === null) vErrors = [err]; else vErrors.push(err); errors++; ';
-  }
-  out += ' } ';
-  if ($breakOnError) {
-    out += ' else { ';
-  }
-  return out;
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.PredefinedFormatToCheckFunction = void 0;
+const enums_1 = require("./enums");
+/*
+These format functions are taken from `tslint-consistent-codestyle/naming-convention`:
+https://github.com/ajafff/tslint-consistent-codestyle/blob/ab156cc8881bcc401236d999f4ce034b59039e81/rules/namingConventionRule.ts#L603-L645
+
+The license for the code can be viewed here:
+https://github.com/ajafff/tslint-consistent-codestyle/blob/ab156cc8881bcc401236d999f4ce034b59039e81/LICENSE
+*/
+/*
+Why not regex here? Because it's actually really, really difficult to create a regex to handle
+all of the unicode cases, and we have many non-english users that use non-english characters.
+https://gist.github.com/mathiasbynens/6334847
+*/
+function isPascalCase(name) {
+    return (name.length === 0 ||
+        (name[0] === name[0].toUpperCase() && !name.includes('_')));
 }
+function isStrictPascalCase(name) {
+    return (name.length === 0 ||
+        (name[0] === name[0].toUpperCase() && hasStrictCamelHumps(name, true)));
+}
+function isCamelCase(name) {
+    return (name.length === 0 ||
+        (name[0] === name[0].toLowerCase() && !name.includes('_')));
+}
+function isStrictCamelCase(name) {
+    return (name.length === 0 ||
+        (name[0] === name[0].toLowerCase() && hasStrictCamelHumps(name, false)));
+}
+function hasStrictCamelHumps(name, isUpper) {
+    function isUppercaseChar(char) {
+        return char === char.toUpperCase() && char !== char.toLowerCase();
+    }
+    if (name.startsWith('_')) {
+        return false;
+    }
+    for (let i = 1; i < name.length; ++i) {
+        if (name[i] === '_') {
+            return false;
+        }
+        if (isUpper === isUppercaseChar(name[i])) {
+            if (isUpper) {
+                return false;
+            }
+        }
+        else {
+            isUpper = !isUpper;
+        }
+    }
+    return true;
+}
+function isSnakeCase(name) {
+    return (name.length === 0 ||
+        (name === name.toLowerCase() && validateUnderscores(name)));
+}
+function isUpperCase(name) {
+    return (name.length === 0 ||
+        (name === name.toUpperCase() && validateUnderscores(name)));
+}
+/** Check for leading trailing and adjacent underscores */
+function validateUnderscores(name) {
+    if (name.startsWith('_')) {
+        return false;
+    }
+    let wasUnderscore = false;
+    for (let i = 1; i < name.length; ++i) {
+        if (name[i] === '_') {
+            if (wasUnderscore) {
+                return false;
+            }
+            wasUnderscore = true;
+        }
+        else {
+            wasUnderscore = false;
+        }
+    }
+    return !wasUnderscore;
+}
+const PredefinedFormatToCheckFunction = {
+    [enums_1.PredefinedFormats.PascalCase]: isPascalCase,
+    [enums_1.PredefinedFormats.StrictPascalCase]: isStrictPascalCase,
+    [enums_1.PredefinedFormats.camelCase]: isCamelCase,
+    [enums_1.PredefinedFormats.strictCamelCase]: isStrictCamelCase,
+    [enums_1.PredefinedFormats.UPPER_CASE]: isUpperCase,
+    [enums_1.PredefinedFormats.snake_case]: isSnakeCase,
+};
+exports.PredefinedFormatToCheckFunction = PredefinedFormatToCheckFunction;
+//# sourceMappingURL=format.js.map

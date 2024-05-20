@@ -1,8 +1,5 @@
-"use strict";
 // translate the various posix character classes into unicode properties
 // this works across all unicode locales
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.parseClass = void 0;
 // { <posix class>: [<translation>, /u flag required, negated]
 const posixClasses = {
     '[:alnum:]': ['\\p{L}\\p{Nl}\\p{Nd}', true],
@@ -33,7 +30,7 @@ const rangesToString = (ranges) => ranges.join('');
 // consumed to parse the character class.
 // This also removes out of order ranges, and returns ($.) if the
 // entire class just no good.
-const parseClass = (glob, position) => {
+export const parseClass = (glob, position) => {
     const pos = position;
     /* c8 ignore start */
     if (glob.charAt(pos) !== '[') {
@@ -148,5 +145,4 @@ const parseClass = (glob, position) => {
             : snegs;
     return [comb, uflag, endPos - pos, true];
 };
-exports.parseClass = parseClass;
 //# sourceMappingURL=brace-expressions.js.map

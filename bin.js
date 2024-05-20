@@ -1,90 +1,68 @@
-'use strict';
+#!/usr/bin/env node
 
-var path = require('path');
-var fs = require('fs');
-var acorn = require('./acorn.js');
+const rimraf = require('./')
 
-function _interopNamespaceDefault(e) {
-  var n = Object.create(null);
-  if (e) {
-    Object.keys(e).forEach(function (k) {
-      if (k !== 'default') {
-        var d = Object.getOwnPropertyDescriptor(e, k);
-        Object.defineProperty(n, k, d.get ? d : {
-          enumerable: true,
-          get: function () { return e[k]; }
-        });
-      }
-    });
+const path = require('path')
+
+const isRoot = arg => /^(\/|[a-zA-Z]:\\)$/.test(path.resolve(arg))
+const filterOutRoot = arg => {
+  const ok = preserveRoot === false || !isRoot(arg)
+  if (!ok) {
+    console.error(`refusing to remove ${arg}`)
+    console.error('Set --no-preserve-root to allow this')
   }
-  n.default = e;
-  return Object.freeze(n);
+  return ok
 }
 
-var acorn__namespace = /*#__PURE__*/_interopNamespaceDefault(acorn);
+let help = false
+let dashdash = false
+let noglob = false
+let preserveRoot = true
+const args = process.argv.slice(2).filter(arg => {
+  if (dashdash)
+    return !!arg
+  else if (arg === '--')
+    dashdash = true
+  else if (arg === '--no-glob' || arg === '-G')
+    noglob = true
+  else if (arg === '--glob' || arg === '-g')
+    noglob = false
+  else if (arg.match(/^(-+|\/)(h(elp)?|\?)$/))
+    help = true
+  else if (arg === '--preserve-root')
+    preserveRoot = true
+  else if (arg === '--no-preserve-root')
+    preserveRoot = false
+  else
+    return !!arg
+}).filter(arg => !preserveRoot || filterOutRoot(arg))
 
-var inputFilePaths = [], forceFileName = false, fileMode = false, silent = false, compact = false, tokenize = false;
-var options = {};
-
-function help(status) {
-  var print = (status === 0) ? console.log : console.error;
-  print("usage: " + path.basename(process.argv[1]) + " [--ecma3|--ecma5|--ecma6|--ecma7|--ecma8|--ecma9|...|--ecma2015|--ecma2016|--ecma2017|--ecma2018|...]");
-  print("        [--tokenize] [--locations] [--allow-hash-bang] [--allow-await-outside-function] [--compact] [--silent] [--module] [--help] [--] [<infile>...]");
-  process.exit(status);
+const go = n => {
+  if (n >= args.length)
+    return
+  const options = noglob ? { glob: false } : {}
+  rimraf(args[n], options, er => {
+    if (er)
+      throw er
+    go(n+1)
+  })
 }
 
-for (var i = 2; i < process.argv.length; ++i) {
-  var arg = process.argv[i];
-  if (arg[0] !== "-" || arg === "-") { inputFilePaths.push(arg); }
-  else if (arg === "--") {
-    inputFilePaths.push.apply(inputFilePaths, process.argv.slice(i + 1));
-    forceFileName = true;
-    break
-  } else if (arg === "--locations") { options.locations = true; }
-  else if (arg === "--allow-hash-bang") { options.allowHashBang = true; }
-  else if (arg === "--allow-await-outside-function") { options.allowAwaitOutsideFunction = true; }
-  else if (arg === "--silent") { silent = true; }
-  else if (arg === "--compact") { compact = true; }
-  else if (arg === "--help") { help(0); }
-  else if (arg === "--tokenize") { tokenize = true; }
-  else if (arg === "--module") { options.sourceType = "module"; }
-  else {
-    var match = arg.match(/^--ecma(\d+)$/);
-    if (match)
-      { options.ecmaVersion = +match[1]; }
-    else
-      { help(1); }
-  }
-}
-
-function run(codeList) {
-  var result = [], fileIdx = 0;
-  try {
-    codeList.forEach(function (code, idx) {
-      fileIdx = idx;
-      if (!tokenize) {
-        result = acorn__namespace.parse(code, options);
-        options.program = result;
-      } else {
-        var tokenizer = acorn__namespace.tokenizer(code, options), token;
-        do {
-          token = tokenizer.getToken();
-          result.push(token);
-        } while (token.type !== acorn__namespace.tokTypes.eof)
-      }
-    });
-  } catch (e) {
-    console.error(fileMode ? e.message.replace(/\(\d+:\d+\)$/, function (m) { return m.slice(0, 1) + inputFilePaths[fileIdx] + " " + m.slice(1); }) : e.message);
-    process.exit(1);
-  }
-  if (!silent) { console.log(JSON.stringify(result, null, compact ? null : 2)); }
-}
-
-if (fileMode = inputFilePaths.length && (forceFileName || !inputFilePaths.includes("-") || inputFilePaths.length !== 1)) {
-  run(inputFilePaths.map(function (path) { return fs.readFileSync(path, "utf8"); }));
-} else {
-  var code = "";
-  process.stdin.resume();
-  process.stdin.on("data", function (chunk) { return code += chunk; });
-  process.stdin.on("end", function () { return run([code]); });
-}
+if (help || args.length === 0) {
+  // If they didn't ask for help, then this is not a "success"
+  const log = help ? console.log : console.error
+  log('Usage: rimraf <path> [<path> ...]')
+  log('')
+  log('  Deletes all files and folders at "path" recursively.')
+  log('')
+  log('Options:')
+  log('')
+  log('  -h, --help          Display this usage info')
+  log('  -G, --no-glob       Do not expand glob patterns in arguments')
+  log('  -g, --glob          Expand glob patterns in arguments (default)')
+  log('  --preserve-root     Do not remove \'/\' (default)')
+  log('  --no-preserve-root  Do not treat \'/\' specially')
+  log('  --                  Stop parsing flags')
+  process.exit(help ? 0 : 1)
+} else
+  go(0)

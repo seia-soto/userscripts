@@ -1,201 +1,171 @@
-/**
- * @fileoverview Disallows or enforces spaces inside of object literals.
- * @author Jamund Ferguson
- * @deprecated in ESLint v8.53.0
- */
 "use strict";
-
-const astUtils = require("./utils/ast-utils");
-
-//------------------------------------------------------------------------------
-// Rule Definition
-//------------------------------------------------------------------------------
-
-/** @type {import('../shared/types').Rule} */
-module.exports = {
+Object.defineProperty(exports, "__esModule", { value: true });
+const utils_1 = require("@typescript-eslint/utils");
+const eslint_utils_1 = require("@typescript-eslint/utils/eslint-utils");
+const util_1 = require("../util");
+const getESLintCoreRule_1 = require("../util/getESLintCoreRule");
+const baseRule = (0, getESLintCoreRule_1.getESLintCoreRule)('object-curly-spacing');
+exports.default = (0, util_1.createRule)({
+    name: 'object-curly-spacing',
+    // eslint-disable-next-line eslint-plugin/prefer-message-ids,eslint-plugin/require-meta-type,eslint-plugin/require-meta-schema,eslint-plugin/require-meta-fixable -- all in base rule - https://github.com/not-an-aardvark/eslint-plugin-eslint-plugin/issues/274
     meta: {
+        ...baseRule.meta,
         deprecated: true,
-        replacedBy: [],
-        type: "layout",
-
         docs: {
-            description: "Enforce consistent spacing inside braces",
-            recommended: false,
-            url: "https://eslint.org/docs/latest/rules/object-curly-spacing"
+            description: 'Enforce consistent spacing inside braces',
+            extendsBaseRule: true,
         },
-
-        fixable: "whitespace",
-
-        schema: [
-            {
-                enum: ["always", "never"]
-            },
-            {
-                type: "object",
-                properties: {
-                    arraysInObjects: {
-                        type: "boolean"
-                    },
-                    objectsInObjects: {
-                        type: "boolean"
-                    }
-                },
-                additionalProperties: false
-            }
-        ],
-
-        messages: {
-            requireSpaceBefore: "A space is required before '{{token}}'.",
-            requireSpaceAfter: "A space is required after '{{token}}'.",
-            unexpectedSpaceBefore: "There should be no space before '{{token}}'.",
-            unexpectedSpaceAfter: "There should be no space after '{{token}}'."
-        }
+        replacedBy: ['@stylistic/ts/object-curly-spacing'],
     },
-
+    defaultOptions: ['never'],
     create(context) {
-        const spaced = context.options[0] === "always",
-            sourceCode = context.sourceCode;
-
+        // eslint-disable-next-line no-restricted-syntax -- Use raw options for extended rules.
+        const [firstOption, secondOption] = context.options;
+        const spaced = firstOption === 'always';
+        const sourceCode = (0, eslint_utils_1.getSourceCode)(context);
         /**
          * Determines whether an option is set, relative to the spacing option.
          * If spaced is "always", then check whether option is set to false.
          * If spaced is "never", then check whether option is set to true.
-         * @param {Object} option The option to exclude.
-         * @returns {boolean} Whether or not the property is excluded.
+         * @param option The option to exclude.
+         * @returns Whether or not the property is excluded.
          */
         function isOptionSet(option) {
-            return context.options[1] ? context.options[1][option] === !spaced : false;
+            return secondOption ? secondOption[option] === !spaced : false;
         }
-
         const options = {
             spaced,
-            arraysInObjectsException: isOptionSet("arraysInObjects"),
-            objectsInObjectsException: isOptionSet("objectsInObjects")
+            arraysInObjectsException: isOptionSet('arraysInObjects'),
+            objectsInObjectsException: isOptionSet('objectsInObjects'),
         };
-
         //--------------------------------------------------------------------------
         // Helpers
         //--------------------------------------------------------------------------
-
         /**
          * Reports that there shouldn't be a space after the first token
-         * @param {ASTNode} node The node to report in the event of an error.
-         * @param {Token} token The token to use for the report.
-         * @returns {void}
+         * @param node The node to report in the event of an error.
+         * @param token The token to use for the report.
          */
         function reportNoBeginningSpace(node, token) {
-            const nextToken = context.sourceCode.getTokenAfter(token, { includeComments: true });
-
+            const nextToken = (0, eslint_utils_1.getSourceCode)(context).getTokenAfter(token, {
+                includeComments: true,
+            });
             context.report({
                 node,
                 loc: { start: token.loc.end, end: nextToken.loc.start },
-                messageId: "unexpectedSpaceAfter",
+                messageId: 'unexpectedSpaceAfter',
                 data: {
-                    token: token.value
+                    token: token.value,
                 },
                 fix(fixer) {
                     return fixer.removeRange([token.range[1], nextToken.range[0]]);
-                }
+                },
             });
         }
-
         /**
          * Reports that there shouldn't be a space before the last token
-         * @param {ASTNode} node The node to report in the event of an error.
-         * @param {Token} token The token to use for the report.
-         * @returns {void}
+         * @param node The node to report in the event of an error.
+         * @param token The token to use for the report.
          */
         function reportNoEndingSpace(node, token) {
-            const previousToken = context.sourceCode.getTokenBefore(token, { includeComments: true });
-
+            const previousToken = (0, eslint_utils_1.getSourceCode)(context).getTokenBefore(token, {
+                includeComments: true,
+            });
             context.report({
                 node,
                 loc: { start: previousToken.loc.end, end: token.loc.start },
-                messageId: "unexpectedSpaceBefore",
+                messageId: 'unexpectedSpaceBefore',
                 data: {
-                    token: token.value
+                    token: token.value,
                 },
                 fix(fixer) {
                     return fixer.removeRange([previousToken.range[1], token.range[0]]);
-                }
+                },
             });
         }
-
         /**
          * Reports that there should be a space after the first token
-         * @param {ASTNode} node The node to report in the event of an error.
-         * @param {Token} token The token to use for the report.
-         * @returns {void}
+         * @param node The node to report in the event of an error.
+         * @param token The token to use for the report.
          */
         function reportRequiredBeginningSpace(node, token) {
             context.report({
                 node,
                 loc: token.loc,
-                messageId: "requireSpaceAfter",
+                messageId: 'requireSpaceAfter',
                 data: {
-                    token: token.value
+                    token: token.value,
                 },
                 fix(fixer) {
-                    return fixer.insertTextAfter(token, " ");
-                }
+                    return fixer.insertTextAfter(token, ' ');
+                },
             });
         }
-
         /**
          * Reports that there should be a space before the last token
-         * @param {ASTNode} node The node to report in the event of an error.
-         * @param {Token} token The token to use for the report.
-         * @returns {void}
+         * @param node The node to report in the event of an error.
+         * @param token The token to use for the report.
          */
         function reportRequiredEndingSpace(node, token) {
             context.report({
                 node,
                 loc: token.loc,
-                messageId: "requireSpaceBefore",
+                messageId: 'requireSpaceBefore',
                 data: {
-                    token: token.value
+                    token: token.value,
                 },
                 fix(fixer) {
-                    return fixer.insertTextBefore(token, " ");
-                }
+                    return fixer.insertTextBefore(token, ' ');
+                },
             });
         }
-
         /**
          * Determines if spacing in curly braces is valid.
-         * @param {ASTNode} node The AST node to check.
-         * @param {Token} first The first token to check (should be the opening brace)
-         * @param {Token} second The second token to check (should be first after the opening brace)
-         * @param {Token} penultimate The penultimate token to check (should be last before closing brace)
-         * @param {Token} last The last token to check (should be closing brace)
-         * @returns {void}
+         * @param node The AST node to check.
+         * @param first The first token to check (should be the opening brace)
+         * @param second The second token to check (should be first after the opening brace)
+         * @param penultimate The penultimate token to check (should be last before closing brace)
+         * @param last The last token to check (should be closing brace)
          */
         function validateBraceSpacing(node, first, second, penultimate, last) {
-            if (astUtils.isTokenOnSameLine(first, second)) {
-                const firstSpaced = sourceCode.isSpaceBetweenTokens(first, second);
-
-                if (options.spaced && !firstSpaced) {
+            if ((0, util_1.isTokenOnSameLine)(first, second)) {
+                const firstSpaced = sourceCode.isSpaceBetween(first, second);
+                const secondType = sourceCode.getNodeByRangeIndex(second.range[0]).type;
+                const openingCurlyBraceMustBeSpaced = options.arraysInObjectsException &&
+                    [
+                        utils_1.AST_NODE_TYPES.TSMappedType,
+                        utils_1.AST_NODE_TYPES.TSIndexSignature,
+                    ].includes(secondType)
+                    ? !options.spaced
+                    : options.spaced;
+                if (openingCurlyBraceMustBeSpaced && !firstSpaced) {
                     reportRequiredBeginningSpace(node, first);
                 }
-                if (!options.spaced && firstSpaced && second.type !== "Line") {
+                if (!openingCurlyBraceMustBeSpaced &&
+                    firstSpaced &&
+                    second.type !== utils_1.AST_TOKEN_TYPES.Line) {
                     reportNoBeginningSpace(node, first);
                 }
             }
-
-            if (astUtils.isTokenOnSameLine(penultimate, last)) {
-                const shouldCheckPenultimate = (
-                    options.arraysInObjectsException && astUtils.isClosingBracketToken(penultimate) ||
-                    options.objectsInObjectsException && astUtils.isClosingBraceToken(penultimate)
-                );
-                const penultimateType = shouldCheckPenultimate && sourceCode.getNodeByRangeIndex(penultimate.range[0]).type;
-
-                const closingCurlyBraceMustBeSpaced = (
-                    options.arraysInObjectsException && penultimateType === "ArrayExpression" ||
-                    options.objectsInObjectsException && (penultimateType === "ObjectExpression" || penultimateType === "ObjectPattern")
-                ) ? !options.spaced : options.spaced;
-
-                const lastSpaced = sourceCode.isSpaceBetweenTokens(penultimate, last);
-
+            if ((0, util_1.isTokenOnSameLine)(penultimate, last)) {
+                const shouldCheckPenultimate = (options.arraysInObjectsException &&
+                    (0, util_1.isClosingBracketToken)(penultimate)) ||
+                    (options.objectsInObjectsException &&
+                        (0, util_1.isClosingBraceToken)(penultimate));
+                const penultimateType = shouldCheckPenultimate
+                    ? sourceCode.getNodeByRangeIndex(penultimate.range[0]).type
+                    : undefined;
+                const closingCurlyBraceMustBeSpaced = (options.arraysInObjectsException &&
+                    penultimateType === utils_1.AST_NODE_TYPES.TSTupleType) ||
+                    (options.objectsInObjectsException &&
+                        penultimateType !== undefined &&
+                        [
+                            utils_1.AST_NODE_TYPES.TSMappedType,
+                            utils_1.AST_NODE_TYPES.TSTypeLiteral,
+                        ].includes(penultimateType))
+                    ? !options.spaced
+                    : options.spaced;
+                const lastSpaced = sourceCode.isSpaceBetween(penultimate, last);
                 if (closingCurlyBraceMustBeSpaced && !lastSpaced) {
                     reportRequiredEndingSpace(node, last);
                 }
@@ -204,108 +174,53 @@ module.exports = {
                 }
             }
         }
-
         /**
          * Gets '}' token of an object node.
          *
          * Because the last token of object patterns might be a type annotation,
          * this traverses tokens preceded by the last property, then returns the
          * first '}' token.
-         * @param {ASTNode} node The node to get. This node is an
+         * @param node The node to get. This node is an
          *      ObjectExpression or an ObjectPattern. And this node has one or
          *      more properties.
-         * @returns {Token} '}' token.
+         * @returns '}' token.
          */
         function getClosingBraceOfObject(node) {
-            const lastProperty = node.properties[node.properties.length - 1];
-
-            return sourceCode.getTokenAfter(lastProperty, astUtils.isClosingBraceToken);
+            const lastProperty = node.members[node.members.length - 1];
+            return sourceCode.getTokenAfter(lastProperty, util_1.isClosingBraceToken);
         }
-
-        /**
-         * Reports a given object node if spacing in curly braces is invalid.
-         * @param {ASTNode} node An ObjectExpression or ObjectPattern node to check.
-         * @returns {void}
-         */
-        function checkForObject(node) {
-            if (node.properties.length === 0) {
-                return;
-            }
-
-            const first = sourceCode.getFirstToken(node),
-                last = getClosingBraceOfObject(node),
-                second = sourceCode.getTokenAfter(first, { includeComments: true }),
-                penultimate = sourceCode.getTokenBefore(last, { includeComments: true });
-
-            validateBraceSpacing(node, first, second, penultimate, last);
-        }
-
-        /**
-         * Reports a given import node if spacing in curly braces is invalid.
-         * @param {ASTNode} node An ImportDeclaration node to check.
-         * @returns {void}
-         */
-        function checkForImport(node) {
-            if (node.specifiers.length === 0) {
-                return;
-            }
-
-            let firstSpecifier = node.specifiers[0];
-            const lastSpecifier = node.specifiers[node.specifiers.length - 1];
-
-            if (lastSpecifier.type !== "ImportSpecifier") {
-                return;
-            }
-            if (firstSpecifier.type !== "ImportSpecifier") {
-                firstSpecifier = node.specifiers[1];
-            }
-
-            const first = sourceCode.getTokenBefore(firstSpecifier),
-                last = sourceCode.getTokenAfter(lastSpecifier, astUtils.isNotCommaToken),
-                second = sourceCode.getTokenAfter(first, { includeComments: true }),
-                penultimate = sourceCode.getTokenBefore(last, { includeComments: true });
-
-            validateBraceSpacing(node, first, second, penultimate, last);
-        }
-
-        /**
-         * Reports a given export node if spacing in curly braces is invalid.
-         * @param {ASTNode} node An ExportNamedDeclaration node to check.
-         * @returns {void}
-         */
-        function checkForExport(node) {
-            if (node.specifiers.length === 0) {
-                return;
-            }
-
-            const firstSpecifier = node.specifiers[0],
-                lastSpecifier = node.specifiers[node.specifiers.length - 1],
-                first = sourceCode.getTokenBefore(firstSpecifier),
-                last = sourceCode.getTokenAfter(lastSpecifier, astUtils.isNotCommaToken),
-                second = sourceCode.getTokenAfter(first, { includeComments: true }),
-                penultimate = sourceCode.getTokenBefore(last, { includeComments: true });
-
-            validateBraceSpacing(node, first, second, penultimate, last);
-        }
-
         //--------------------------------------------------------------------------
         // Public
         //--------------------------------------------------------------------------
-
+        const rules = baseRule.create(context);
         return {
-
-            // var {x} = y;
-            ObjectPattern: checkForObject,
-
-            // var y = {x: 'y'}
-            ObjectExpression: checkForObject,
-
-            // import {y} from 'x';
-            ImportDeclaration: checkForImport,
-
-            // export {name} from 'yo';
-            ExportNamedDeclaration: checkForExport
+            ...rules,
+            TSMappedType(node) {
+                const first = sourceCode.getFirstToken(node);
+                const last = sourceCode.getLastToken(node);
+                const second = sourceCode.getTokenAfter(first, {
+                    includeComments: true,
+                });
+                const penultimate = sourceCode.getTokenBefore(last, {
+                    includeComments: true,
+                });
+                validateBraceSpacing(node, first, second, penultimate, last);
+            },
+            TSTypeLiteral(node) {
+                if (node.members.length === 0) {
+                    return;
+                }
+                const first = sourceCode.getFirstToken(node);
+                const last = getClosingBraceOfObject(node);
+                const second = sourceCode.getTokenAfter(first, {
+                    includeComments: true,
+                });
+                const penultimate = sourceCode.getTokenBefore(last, {
+                    includeComments: true,
+                });
+                validateBraceSpacing(node, first, second, penultimate, last);
+            },
         };
-
-    }
-};
+    },
+});
+//# sourceMappingURL=object-curly-spacing.js.map

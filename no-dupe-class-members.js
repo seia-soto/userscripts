@@ -1,104 +1,51 @@
-/**
- * @fileoverview A rule to disallow duplicate name in class members.
- * @author Toru Nagashima
- */
-
 "use strict";
-
-const astUtils = require("./utils/ast-utils");
-
-//------------------------------------------------------------------------------
-// Rule Definition
-//------------------------------------------------------------------------------
-
-/** @type {import('../shared/types').Rule} */
-module.exports = {
+Object.defineProperty(exports, "__esModule", { value: true });
+const utils_1 = require("@typescript-eslint/utils");
+const util_1 = require("../util");
+const getESLintCoreRule_1 = require("../util/getESLintCoreRule");
+const baseRule = (0, getESLintCoreRule_1.getESLintCoreRule)('no-dupe-class-members');
+exports.default = (0, util_1.createRule)({
+    name: 'no-dupe-class-members',
     meta: {
-        type: "problem",
-
+        type: 'problem',
         docs: {
-            description: "Disallow duplicate class members",
-            recommended: true,
-            url: "https://eslint.org/docs/latest/rules/no-dupe-class-members"
+            description: 'Disallow duplicate class members',
+            extendsBaseRule: true,
         },
-
-        schema: [],
-
-        messages: {
-            unexpected: "Duplicate name '{{name}}'."
-        }
+        hasSuggestions: baseRule.meta.hasSuggestions,
+        schema: baseRule.meta.schema,
+        messages: baseRule.meta.messages,
     },
-
+    defaultOptions: [],
     create(context) {
-        let stack = [];
-
-        /**
-         * Gets state of a given member name.
-         * @param {string} name A name of a member.
-         * @param {boolean} isStatic A flag which specifies that is a static member.
-         * @returns {Object} A state of a given member name.
-         *   - retv.init {boolean} A flag which shows the name is declared as normal member.
-         *   - retv.get {boolean} A flag which shows the name is declared as getter.
-         *   - retv.set {boolean} A flag which shows the name is declared as setter.
-         */
-        function getState(name, isStatic) {
-            const stateMap = stack[stack.length - 1];
-            const key = `$${name}`; // to avoid "__proto__".
-
-            if (!stateMap[key]) {
-                stateMap[key] = {
-                    nonStatic: { init: false, get: false, set: false },
-                    static: { init: false, get: false, set: false }
-                };
-            }
-
-            return stateMap[key][isStatic ? "static" : "nonStatic"];
-        }
-
-        return {
-
-            // Initializes the stack of state of member declarations.
-            Program() {
-                stack = [];
-            },
-
-            // Initializes state of member declarations for the class.
-            ClassBody() {
-                stack.push(Object.create(null));
-            },
-
-            // Disposes the state for the class.
-            "ClassBody:exit"() {
-                stack.pop();
-            },
-
-            // Reports the node if its name has been declared already.
-            "MethodDefinition, PropertyDefinition"(node) {
-                const name = astUtils.getStaticPropertyName(node);
-                const kind = node.type === "MethodDefinition" ? node.kind : "field";
-
-                if (name === null || kind === "constructor") {
+        const rules = baseRule.create(context);
+        function wrapMemberDefinitionListener(coreListener) {
+            return (node) => {
+                if (node.computed) {
                     return;
                 }
-
-                const state = getState(name, node.static);
-                let isDuplicate = false;
-
-                if (kind === "get") {
-                    isDuplicate = (state.init || state.get);
-                    state.get = true;
-                } else if (kind === "set") {
-                    isDuplicate = (state.init || state.set);
-                    state.set = true;
-                } else {
-                    isDuplicate = (state.init || state.get || state.set);
-                    state.init = true;
+                if (node.value &&
+                    node.value.type === utils_1.AST_NODE_TYPES.TSEmptyBodyFunctionExpression) {
+                    return;
                 }
-
-                if (isDuplicate) {
-                    context.report({ node, messageId: "unexpected", data: { name } });
+                return coreListener(node);
+            };
+        }
+        return {
+            ...rules,
+            // for ESLint <= v7
+            ...(rules.MethodDefinition
+                ? {
+                    MethodDefinition: wrapMemberDefinitionListener(rules.MethodDefinition),
                 }
-            }
+                : {}),
+            // for ESLint v8
+            ...(rules['MethodDefinition, PropertyDefinition']
+                ? {
+                    'MethodDefinition, PropertyDefinition': wrapMemberDefinitionListener(rules['MethodDefinition, PropertyDefinition']),
+                }
+                : {}),
         };
-    }
-};
+    },
+});
+//# sourceMappingURL=no-dupe-class-members.js.map

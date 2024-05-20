@@ -1,76 +1,31 @@
-/**
- * @fileoverview Configuration applied when a user configuration extends from
- * eslint:recommended.
- * @author Nicholas C. Zakas
- */
-
 "use strict";
-
-/* eslint sort-keys: ["error", "asc"] -- Long, so make more readable */
-
-/** @type {import("../lib/shared/types").ConfigData} */
-module.exports = Object.freeze({
-    rules: Object.freeze({
-        "constructor-super": "error",
-        "for-direction": "error",
-        "getter-return": "error",
-        "no-async-promise-executor": "error",
-        "no-case-declarations": "error",
-        "no-class-assign": "error",
-        "no-compare-neg-zero": "error",
-        "no-cond-assign": "error",
-        "no-const-assign": "error",
-        "no-constant-condition": "error",
-        "no-control-regex": "error",
-        "no-debugger": "error",
-        "no-delete-var": "error",
-        "no-dupe-args": "error",
-        "no-dupe-class-members": "error",
-        "no-dupe-else-if": "error",
-        "no-dupe-keys": "error",
-        "no-duplicate-case": "error",
-        "no-empty": "error",
-        "no-empty-character-class": "error",
-        "no-empty-pattern": "error",
-        "no-ex-assign": "error",
-        "no-extra-boolean-cast": "error",
-        "no-extra-semi": "error",
-        "no-fallthrough": "error",
-        "no-func-assign": "error",
-        "no-global-assign": "error",
-        "no-import-assign": "error",
-        "no-inner-declarations": "error",
-        "no-invalid-regexp": "error",
-        "no-irregular-whitespace": "error",
-        "no-loss-of-precision": "error",
-        "no-misleading-character-class": "error",
-        "no-mixed-spaces-and-tabs": "error",
-        "no-new-symbol": "error",
-        "no-nonoctal-decimal-escape": "error",
-        "no-obj-calls": "error",
-        "no-octal": "error",
-        "no-prototype-builtins": "error",
-        "no-redeclare": "error",
-        "no-regex-spaces": "error",
-        "no-self-assign": "error",
-        "no-setter-return": "error",
-        "no-shadow-restricted-names": "error",
-        "no-sparse-arrays": "error",
-        "no-this-before-super": "error",
-        "no-undef": "error",
-        "no-unexpected-multiline": "error",
-        "no-unreachable": "error",
-        "no-unsafe-finally": "error",
-        "no-unsafe-negation": "error",
-        "no-unsafe-optional-chaining": "error",
-        "no-unused-labels": "error",
-        "no-unused-vars": "error",
-        "no-useless-backreference": "error",
-        "no-useless-catch": "error",
-        "no-useless-escape": "error",
-        "no-with": "error",
-        "require-yield": "error",
-        "use-isnan": "error",
-        "valid-typeof": "error"
-    })
-});
+module.exports = {
+    overrides: [
+        {
+            files: ['*.ts', '*.tsx', '*.mts', '*.cts'],
+            rules: {
+                'constructor-super': 'off', // ts(2335) & ts(2377)
+                'getter-return': 'off', // ts(2378)
+                'no-const-assign': 'off', // ts(2588)
+                'no-dupe-args': 'off', // ts(2300)
+                'no-dupe-class-members': 'off', // ts(2393) & ts(2300)
+                'no-dupe-keys': 'off', // ts(1117)
+                'no-func-assign': 'off', // ts(2630)
+                'no-import-assign': 'off', // ts(2632) & ts(2540)
+                'no-new-symbol': 'off', // ts(7009)
+                'no-obj-calls': 'off', // ts(2349)
+                'no-redeclare': 'off', // ts(2451)
+                'no-setter-return': 'off', // ts(2408)
+                'no-this-before-super': 'off', // ts(2376) & ts(17009)
+                'no-undef': 'off', // ts(2304) & ts(2552)
+                'no-unreachable': 'off', // ts(7027)
+                'no-unsafe-negation': 'off', // ts(2365) & ts(2322) & ts(2358)
+                'no-var': 'error', // ts transpiles let/const to var, so no need for vars any more
+                'prefer-const': 'error', // ts provides better types with const
+                'prefer-rest-params': 'error', // ts provides better types with rest args over arguments
+                'prefer-spread': 'error', // ts transpiles spread to apply, so no need for manual apply
+            },
+        },
+    ],
+};
+//# sourceMappingURL=eslint-recommended.js.map

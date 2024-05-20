@@ -1,198 +1,133 @@
-/**
- * @fileoverview Require spaces around infix operators
- * @author Michael Ficarra
- * @deprecated in ESLint v8.53.0
- */
 "use strict";
-
-const { isEqToken } = require("./utils/ast-utils");
-
-//------------------------------------------------------------------------------
-// Rule Definition
-//------------------------------------------------------------------------------
-
-/** @type {import('../shared/types').Rule} */
-module.exports = {
+Object.defineProperty(exports, "__esModule", { value: true });
+const utils_1 = require("@typescript-eslint/utils");
+const eslint_utils_1 = require("@typescript-eslint/utils/eslint-utils");
+const util_1 = require("../util");
+const getESLintCoreRule_1 = require("../util/getESLintCoreRule");
+const baseRule = (0, getESLintCoreRule_1.getESLintCoreRule)('space-infix-ops');
+const UNIONS = ['|', '&'];
+exports.default = (0, util_1.createRule)({
+    name: 'space-infix-ops',
     meta: {
         deprecated: true,
-        replacedBy: [],
-        type: "layout",
-
+        replacedBy: ['@stylistic/ts/space-infix-ops'],
+        type: 'layout',
         docs: {
-            description: "Require spacing around infix operators",
-            recommended: false,
-            url: "https://eslint.org/docs/latest/rules/space-infix-ops"
+            description: 'Require spacing around infix operators',
+            extendsBaseRule: true,
         },
-
-        fixable: "whitespace",
-
-        schema: [
-            {
-                type: "object",
-                properties: {
-                    int32Hint: {
-                        type: "boolean",
-                        default: false
-                    }
-                },
-                additionalProperties: false
-            }
-        ],
-
+        fixable: baseRule.meta.fixable,
+        hasSuggestions: baseRule.meta.hasSuggestions,
+        schema: baseRule.meta.schema,
         messages: {
-            missingSpace: "Operator '{{operator}}' must be spaced."
-        }
+            // @ts-expect-error -- we report on this messageId so we need to ensure it's there in case ESLint changes in future
+            missingSpace: "Operator '{{operator}}' must be spaced.",
+            ...baseRule.meta.messages,
+        },
     },
-
+    defaultOptions: [
+        {
+            int32Hint: false,
+        },
+    ],
     create(context) {
-        const int32Hint = context.options[0] ? context.options[0].int32Hint === true : false;
-        const sourceCode = context.sourceCode;
-
-        /**
-         * Returns the first token which violates the rule
-         * @param {ASTNode} left The left node of the main node
-         * @param {ASTNode} right The right node of the main node
-         * @param {string} op The operator of the main node
-         * @returns {Object} The violator token or null
-         * @private
-         */
-        function getFirstNonSpacedToken(left, right, op) {
-            const operator = sourceCode.getFirstTokenBetween(left, right, token => token.value === op);
-            const prev = sourceCode.getTokenBefore(operator);
-            const next = sourceCode.getTokenAfter(operator);
-
-            if (!sourceCode.isSpaceBetweenTokens(prev, operator) || !sourceCode.isSpaceBetweenTokens(operator, next)) {
-                return operator;
-            }
-
-            return null;
-        }
-
-        /**
-         * Reports an AST node as a rule violation
-         * @param {ASTNode} mainNode The node to report
-         * @param {Object} culpritToken The token which has a problem
-         * @returns {void}
-         * @private
-         */
-        function report(mainNode, culpritToken) {
+        const rules = baseRule.create(context);
+        const sourceCode = (0, eslint_utils_1.getSourceCode)(context);
+        function report(operator) {
             context.report({
-                node: mainNode,
-                loc: culpritToken.loc,
-                messageId: "missingSpace",
+                node: operator,
+                messageId: 'missingSpace',
                 data: {
-                    operator: culpritToken.value
+                    operator: operator.value,
                 },
                 fix(fixer) {
-                    const previousToken = sourceCode.getTokenBefore(culpritToken);
-                    const afterToken = sourceCode.getTokenAfter(culpritToken);
-                    let fixString = "";
-
-                    if (culpritToken.range[0] - previousToken.range[1] === 0) {
-                        fixString = " ";
+                    const previousToken = sourceCode.getTokenBefore(operator);
+                    const afterToken = sourceCode.getTokenAfter(operator);
+                    let fixString = '';
+                    if (operator.range[0] - previousToken.range[1] === 0) {
+                        fixString = ' ';
                     }
-
-                    fixString += culpritToken.value;
-
-                    if (afterToken.range[0] - culpritToken.range[1] === 0) {
-                        fixString += " ";
+                    fixString += operator.value;
+                    if (afterToken.range[0] - operator.range[1] === 0) {
+                        fixString += ' ';
                     }
-
-                    return fixer.replaceText(culpritToken, fixString);
+                    return fixer.replaceText(operator, fixString);
+                },
+            });
+        }
+        function isSpaceChar(token) {
+            return (token.type === utils_1.AST_TOKEN_TYPES.Punctuator && /^[=?:]$/.test(token.value));
+        }
+        function checkAndReportAssignmentSpace(leftNode, rightNode) {
+            if (!rightNode || !leftNode) {
+                return;
+            }
+            const operator = sourceCode.getFirstTokenBetween(leftNode, rightNode, isSpaceChar);
+            const prev = sourceCode.getTokenBefore(operator);
+            const next = sourceCode.getTokenAfter(operator);
+            if (!sourceCode.isSpaceBetween(prev, operator) ||
+                !sourceCode.isSpaceBetween(operator, next)) {
+                report(operator);
+            }
+        }
+        /**
+         * Check if it has an assignment char and report if it's faulty
+         * @param node The node to report
+         */
+        function checkForEnumAssignmentSpace(node) {
+            checkAndReportAssignmentSpace(node.id, node.initializer);
+        }
+        /**
+         * Check if it has an assignment char and report if it's faulty
+         * @param node The node to report
+         */
+        function checkForPropertyDefinitionAssignmentSpace(node) {
+            const leftNode = node.optional && !node.typeAnnotation
+                ? sourceCode.getTokenAfter(node.key)
+                : node.typeAnnotation ?? node.key;
+            checkAndReportAssignmentSpace(leftNode, node.value);
+        }
+        /**
+         * Check if it is missing spaces between type annotations chaining
+         * @param typeAnnotation TypeAnnotations list
+         */
+        function checkForTypeAnnotationSpace(typeAnnotation) {
+            const types = typeAnnotation.types;
+            types.forEach(type => {
+                const skipFunctionParenthesis = type.type === utils_1.TSESTree.AST_NODE_TYPES.TSFunctionType
+                    ? util_1.isNotOpeningParenToken
+                    : 0;
+                const operator = sourceCode.getTokenBefore(type, skipFunctionParenthesis);
+                if (operator != null && UNIONS.includes(operator.value)) {
+                    const prev = sourceCode.getTokenBefore(operator);
+                    const next = sourceCode.getTokenAfter(operator);
+                    if (!sourceCode.isSpaceBetween(prev, operator) ||
+                        !sourceCode.isSpaceBetween(operator, next)) {
+                        report(operator);
+                    }
                 }
             });
         }
-
         /**
-         * Check if the node is binary then report
-         * @param {ASTNode} node node to evaluate
-         * @returns {void}
-         * @private
+         * Check if it has an assignment char and report if it's faulty
+         * @param node The node to report
          */
-        function checkBinary(node) {
-            const leftNode = (node.left.typeAnnotation) ? node.left.typeAnnotation : node.left;
-            const rightNode = node.right;
-
-            // search for = in AssignmentPattern nodes
-            const operator = node.operator || "=";
-
-            const nonSpacedNode = getFirstNonSpacedToken(leftNode, rightNode, operator);
-
-            if (nonSpacedNode) {
-                if (!(int32Hint && sourceCode.getText(node).endsWith("|0"))) {
-                    report(node, nonSpacedNode);
-                }
-            }
+        function checkForTypeAliasAssignment(node) {
+            checkAndReportAssignmentSpace(node.typeParameters ?? node.id, node.typeAnnotation);
         }
-
-        /**
-         * Check if the node is conditional
-         * @param {ASTNode} node node to evaluate
-         * @returns {void}
-         * @private
-         */
-        function checkConditional(node) {
-            const nonSpacedConsequentNode = getFirstNonSpacedToken(node.test, node.consequent, "?");
-            const nonSpacedAlternateNode = getFirstNonSpacedToken(node.consequent, node.alternate, ":");
-
-            if (nonSpacedConsequentNode) {
-                report(node, nonSpacedConsequentNode);
-            }
-
-            if (nonSpacedAlternateNode) {
-                report(node, nonSpacedAlternateNode);
-            }
+        function checkForTypeConditional(node) {
+            checkAndReportAssignmentSpace(node.extendsType, node.trueType);
+            checkAndReportAssignmentSpace(node.trueType, node.falseType);
         }
-
-        /**
-         * Check if the node is a variable
-         * @param {ASTNode} node node to evaluate
-         * @returns {void}
-         * @private
-         */
-        function checkVar(node) {
-            const leftNode = (node.id.typeAnnotation) ? node.id.typeAnnotation : node.id;
-            const rightNode = node.init;
-
-            if (rightNode) {
-                const nonSpacedNode = getFirstNonSpacedToken(leftNode, rightNode, "=");
-
-                if (nonSpacedNode) {
-                    report(node, nonSpacedNode);
-                }
-            }
-        }
-
         return {
-            AssignmentExpression: checkBinary,
-            AssignmentPattern: checkBinary,
-            BinaryExpression: checkBinary,
-            LogicalExpression: checkBinary,
-            ConditionalExpression: checkConditional,
-            VariableDeclarator: checkVar,
-
-            PropertyDefinition(node) {
-                if (!node.value) {
-                    return;
-                }
-
-                /*
-                 * Because of computed properties and type annotations, some
-                 * tokens may exist between `node.key` and `=`.
-                 * Therefore, find the `=` from the right.
-                 */
-                const operatorToken = sourceCode.getTokenBefore(node.value, isEqToken);
-                const leftToken = sourceCode.getTokenBefore(operatorToken);
-                const rightToken = sourceCode.getTokenAfter(operatorToken);
-
-                if (
-                    !sourceCode.isSpaceBetweenTokens(leftToken, operatorToken) ||
-                    !sourceCode.isSpaceBetweenTokens(operatorToken, rightToken)
-                ) {
-                    report(node, operatorToken);
-                }
-            }
+            ...rules,
+            TSEnumMember: checkForEnumAssignmentSpace,
+            PropertyDefinition: checkForPropertyDefinitionAssignmentSpace,
+            TSTypeAliasDeclaration: checkForTypeAliasAssignment,
+            TSUnionType: checkForTypeAnnotationSpace,
+            TSIntersectionType: checkForTypeAnnotationSpace,
+            TSConditionalType: checkForTypeConditional,
         };
-
-    }
-};
+    },
+});
+//# sourceMappingURL=space-infix-ops.js.map

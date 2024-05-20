@@ -1,62 +1,63 @@
-/**
- * @fileoverview enforce default parameters to be last
- * @author Chiawen Chen
- */
-
 "use strict";
-
-/** @type {import('../shared/types').Rule} */
-module.exports = {
+Object.defineProperty(exports, "__esModule", { value: true });
+const utils_1 = require("@typescript-eslint/utils");
+const util_1 = require("../util");
+exports.default = (0, util_1.createRule)({
+    name: 'default-param-last',
     meta: {
-        type: "suggestion",
-
+        type: 'suggestion',
         docs: {
-            description: "Enforce default parameters to be last",
-            recommended: false,
-            url: "https://eslint.org/docs/latest/rules/default-param-last"
+            description: 'Enforce default parameters to be last',
+            extendsBaseRule: true,
         },
-
         schema: [],
-
         messages: {
-            shouldBeLast: "Default parameters should be last."
-        }
+            shouldBeLast: 'Default parameters should be last.',
+        },
     },
-
+    defaultOptions: [],
     create(context) {
-
         /**
-         * Handler for function contexts.
-         * @param {ASTNode} node function node
-         * @returns {void}
+         * checks if node is optional parameter
+         * @param node the node to be evaluated
+         * @private
          */
-        function handleFunction(node) {
+        function isOptionalParam(node) {
+            return 'optional' in node && node.optional;
+        }
+        /**
+         * checks if node is plain parameter
+         * @param node the node to be evaluated
+         * @private
+         */
+        function isPlainParam(node) {
+            return !(node.type === utils_1.AST_NODE_TYPES.AssignmentPattern ||
+                node.type === utils_1.AST_NODE_TYPES.RestElement ||
+                isOptionalParam(node));
+        }
+        function checkDefaultParamLast(node) {
             let hasSeenPlainParam = false;
-
-            for (let i = node.params.length - 1; i >= 0; i -= 1) {
-                const param = node.params[i];
-
-                if (
-                    param.type !== "AssignmentPattern" &&
-                    param.type !== "RestElement"
-                ) {
+            for (let i = node.params.length - 1; i >= 0; i--) {
+                const current = node.params[i];
+                const param = current.type === utils_1.AST_NODE_TYPES.TSParameterProperty
+                    ? current.parameter
+                    : current;
+                if (isPlainParam(param)) {
                     hasSeenPlainParam = true;
                     continue;
                 }
-
-                if (hasSeenPlainParam && param.type === "AssignmentPattern") {
-                    context.report({
-                        node: param,
-                        messageId: "shouldBeLast"
-                    });
+                if (hasSeenPlainParam &&
+                    (isOptionalParam(param) ||
+                        param.type === utils_1.AST_NODE_TYPES.AssignmentPattern)) {
+                    context.report({ node: current, messageId: 'shouldBeLast' });
                 }
             }
         }
-
         return {
-            FunctionDeclaration: handleFunction,
-            FunctionExpression: handleFunction,
-            ArrowFunctionExpression: handleFunction
+            ArrowFunctionExpression: checkDefaultParamLast,
+            FunctionDeclaration: checkDefaultParamLast,
+            FunctionExpression: checkDefaultParamLast,
         };
-    }
-};
+    },
+});
+//# sourceMappingURL=default-param-last.js.map

@@ -1,186 +1,58 @@
-/**
- * @fileoverview Flag expressions in statement position that do not side effect
- * @author Michael Ficarra
- */
 "use strict";
-
-const astUtils = require("./utils/ast-utils");
-
-//------------------------------------------------------------------------------
-// Rule Definition
-//------------------------------------------------------------------------------
-
-/**
- * Returns `true`.
- * @returns {boolean} `true`.
- */
-function alwaysTrue() {
-    return true;
-}
-
-/**
- * Returns `false`.
- * @returns {boolean} `false`.
- */
-function alwaysFalse() {
-    return false;
-}
-
-/** @type {import('../shared/types').Rule} */
-module.exports = {
+Object.defineProperty(exports, "__esModule", { value: true });
+const utils_1 = require("@typescript-eslint/utils");
+const util_1 = require("../util");
+const getESLintCoreRule_1 = require("../util/getESLintCoreRule");
+const baseRule = (0, getESLintCoreRule_1.getESLintCoreRule)('no-unused-expressions');
+exports.default = (0, util_1.createRule)({
+    name: 'no-unused-expressions',
     meta: {
-        type: "suggestion",
-
+        type: 'suggestion',
         docs: {
-            description: "Disallow unused expressions",
-            recommended: false,
-            url: "https://eslint.org/docs/latest/rules/no-unused-expressions"
+            description: 'Disallow unused expressions',
+            extendsBaseRule: true,
         },
-
-        schema: [
-            {
-                type: "object",
-                properties: {
-                    allowShortCircuit: {
-                        type: "boolean",
-                        default: false
-                    },
-                    allowTernary: {
-                        type: "boolean",
-                        default: false
-                    },
-                    allowTaggedTemplates: {
-                        type: "boolean",
-                        default: false
-                    },
-                    enforceForJSX: {
-                        type: "boolean",
-                        default: false
-                    }
-                },
-                additionalProperties: false
-            }
-        ],
-
-        messages: {
-            unusedExpression: "Expected an assignment or function call and instead saw an expression."
-        }
+        hasSuggestions: baseRule.meta.hasSuggestions,
+        schema: baseRule.meta.schema,
+        messages: baseRule.meta.messages,
     },
-
-    create(context) {
-        const config = context.options[0] || {},
-            allowShortCircuit = config.allowShortCircuit || false,
-            allowTernary = config.allowTernary || false,
-            allowTaggedTemplates = config.allowTaggedTemplates || false,
-            enforceForJSX = config.enforceForJSX || false;
-
-        /**
-         * Has AST suggesting a directive.
-         * @param {ASTNode} node any node
-         * @returns {boolean} whether the given node structurally represents a directive
-         */
-        function looksLikeDirective(node) {
-            return node.type === "ExpressionStatement" &&
-                node.expression.type === "Literal" && typeof node.expression.value === "string";
-        }
-
-        /**
-         * Gets the leading sequence of members in a list that pass the predicate.
-         * @param {Function} predicate ([a] -> Boolean) the function used to make the determination
-         * @param {a[]} list the input list
-         * @returns {a[]} the leading sequence of members in the given list that pass the given predicate
-         */
-        function takeWhile(predicate, list) {
-            for (let i = 0; i < list.length; ++i) {
-                if (!predicate(list[i])) {
-                    return list.slice(0, i);
-                }
+    defaultOptions: [
+        {
+            allowShortCircuit: false,
+            allowTernary: false,
+            allowTaggedTemplates: false,
+        },
+    ],
+    create(context, [{ allowShortCircuit = false, allowTernary = false }]) {
+        const rules = baseRule.create(context);
+        function isValidExpression(node) {
+            if (allowShortCircuit && node.type === utils_1.AST_NODE_TYPES.LogicalExpression) {
+                return isValidExpression(node.right);
             }
-            return list.slice();
-        }
-
-        /**
-         * Gets leading directives nodes in a Node body.
-         * @param {ASTNode} node a Program or BlockStatement node
-         * @returns {ASTNode[]} the leading sequence of directive nodes in the given node's body
-         */
-        function directives(node) {
-            return takeWhile(looksLikeDirective, node.body);
-        }
-
-        /**
-         * Detect if a Node is a directive.
-         * @param {ASTNode} node any node
-         * @returns {boolean} whether the given node is considered a directive in its current position
-         */
-        function isDirective(node) {
-
-            /**
-             * https://tc39.es/ecma262/#directive-prologue
-             *
-             * Only `FunctionBody`, `ScriptBody` and `ModuleBody` can have directive prologue.
-             * Class static blocks do not have directive prologue.
-             */
-            return astUtils.isTopLevelExpressionStatement(node) && directives(node.parent).includes(node);
-        }
-
-        /**
-         * The member functions return `true` if the type has no side-effects.
-         * Unknown nodes are handled as `false`, then this rule ignores those.
-         */
-        const Checker = Object.assign(Object.create(null), {
-            isDisallowed(node) {
-                return (Checker[node.type] || alwaysFalse)(node);
-            },
-
-            ArrayExpression: alwaysTrue,
-            ArrowFunctionExpression: alwaysTrue,
-            BinaryExpression: alwaysTrue,
-            ChainExpression(node) {
-                return Checker.isDisallowed(node.expression);
-            },
-            ClassExpression: alwaysTrue,
-            ConditionalExpression(node) {
-                if (allowTernary) {
-                    return Checker.isDisallowed(node.consequent) || Checker.isDisallowed(node.alternate);
-                }
-                return true;
-            },
-            FunctionExpression: alwaysTrue,
-            Identifier: alwaysTrue,
-            JSXElement() {
-                return enforceForJSX;
-            },
-            JSXFragment() {
-                return enforceForJSX;
-            },
-            Literal: alwaysTrue,
-            LogicalExpression(node) {
-                if (allowShortCircuit) {
-                    return Checker.isDisallowed(node.right);
-                }
-                return true;
-            },
-            MemberExpression: alwaysTrue,
-            MetaProperty: alwaysTrue,
-            ObjectExpression: alwaysTrue,
-            SequenceExpression: alwaysTrue,
-            TaggedTemplateExpression() {
-                return !allowTaggedTemplates;
-            },
-            TemplateLiteral: alwaysTrue,
-            ThisExpression: alwaysTrue,
-            UnaryExpression(node) {
-                return node.operator !== "void" && node.operator !== "delete";
+            if (allowTernary && node.type === utils_1.AST_NODE_TYPES.ConditionalExpression) {
+                return (isValidExpression(node.alternate) &&
+                    isValidExpression(node.consequent));
             }
-        });
-
+            return ((node.type === utils_1.AST_NODE_TYPES.ChainExpression &&
+                node.expression.type === utils_1.AST_NODE_TYPES.CallExpression) ||
+                node.type === utils_1.AST_NODE_TYPES.ImportExpression);
+        }
         return {
             ExpressionStatement(node) {
-                if (Checker.isDisallowed(node.expression) && !isDirective(node)) {
-                    context.report({ node, messageId: "unusedExpression" });
+                if (node.directive || isValidExpression(node.expression)) {
+                    return;
                 }
-            }
+                if (node.expression.type ===
+                    utils_1.TSESTree.AST_NODE_TYPES.TSInstantiationExpression) {
+                    rules.ExpressionStatement({
+                        ...node,
+                        expression: node.expression.expression,
+                    });
+                    return;
+                }
+                rules.ExpressionStatement(node);
+            },
         };
-    }
-};
+    },
+});
+//# sourceMappingURL=no-unused-expressions.js.map

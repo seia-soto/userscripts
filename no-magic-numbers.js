@@ -1,243 +1,213 @@
-/**
- * @fileoverview Rule to flag statements that use magic numbers (adapted from https://github.com/danielstjules/buddy.js)
- * @author Vincent Lemeunier
- */
-
 "use strict";
-
-const astUtils = require("./utils/ast-utils");
-
-// Maximum array length by the ECMAScript Specification.
-const MAX_ARRAY_LENGTH = 2 ** 32 - 1;
-
-//------------------------------------------------------------------------------
-// Rule Definition
-//------------------------------------------------------------------------------
-
-/**
- * Convert the value to bigint if it's a string. Otherwise return the value as-is.
- * @param {bigint|number|string} x The value to normalize.
- * @returns {bigint|number} The normalized value.
- */
-function normalizeIgnoreValue(x) {
-    if (typeof x === "string") {
-        return BigInt(x.slice(0, -1));
-    }
-    return x;
-}
-
-/** @type {import('../shared/types').Rule} */
-module.exports = {
-    meta: {
-        type: "suggestion",
-
-        docs: {
-            description: "Disallow magic numbers",
-            recommended: false,
-            url: "https://eslint.org/docs/latest/rules/no-magic-numbers"
+Object.defineProperty(exports, "__esModule", { value: true });
+const utils_1 = require("@typescript-eslint/utils");
+const util_1 = require("../util");
+const getESLintCoreRule_1 = require("../util/getESLintCoreRule");
+const baseRule = (0, getESLintCoreRule_1.getESLintCoreRule)('no-magic-numbers');
+// Extend base schema with additional property to ignore TS numeric literal types
+const schema = (0, util_1.deepMerge)(
+// eslint-disable-next-line @typescript-eslint/no-unsafe-argument -- https://github.com/microsoft/TypeScript/issues/17002
+Array.isArray(baseRule.meta.schema)
+    ? baseRule.meta.schema[0]
+    : baseRule.meta.schema, {
+    properties: {
+        ignoreNumericLiteralTypes: {
+            type: 'boolean',
         },
-
-        schema: [{
-            type: "object",
-            properties: {
-                detectObjects: {
-                    type: "boolean",
-                    default: false
-                },
-                enforceConst: {
-                    type: "boolean",
-                    default: false
-                },
-                ignore: {
-                    type: "array",
-                    items: {
-                        anyOf: [
-                            { type: "number" },
-                            { type: "string", pattern: "^[+-]?(?:0|[1-9][0-9]*)n$" }
-                        ]
-                    },
-                    uniqueItems: true
-                },
-                ignoreArrayIndexes: {
-                    type: "boolean",
-                    default: false
-                },
-                ignoreDefaultValues: {
-                    type: "boolean",
-                    default: false
-                },
-                ignoreClassFieldInitialValues: {
-                    type: "boolean",
-                    default: false
-                }
-            },
-            additionalProperties: false
-        }],
-
-        messages: {
-            useConst: "Number constants declarations must use 'const'.",
-            noMagic: "No magic number: {{raw}}."
-        }
+        ignoreEnums: {
+            type: 'boolean',
+        },
+        ignoreReadonlyClassProperties: {
+            type: 'boolean',
+        },
+        ignoreTypeIndexes: {
+            type: 'boolean',
+        },
     },
-
-    create(context) {
-        const config = context.options[0] || {},
-            detectObjects = !!config.detectObjects,
-            enforceConst = !!config.enforceConst,
-            ignore = new Set((config.ignore || []).map(normalizeIgnoreValue)),
-            ignoreArrayIndexes = !!config.ignoreArrayIndexes,
-            ignoreDefaultValues = !!config.ignoreDefaultValues,
-            ignoreClassFieldInitialValues = !!config.ignoreClassFieldInitialValues;
-
-        const okTypes = detectObjects ? [] : ["ObjectExpression", "Property", "AssignmentExpression"];
-
-        /**
-         * Returns whether the rule is configured to ignore the given value
-         * @param {bigint|number} value The value to check
-         * @returns {boolean} true if the value is ignored
-         */
-        function isIgnoredValue(value) {
-            return ignore.has(value);
-        }
-
-        /**
-         * Returns whether the number is a default value assignment.
-         * @param {ASTNode} fullNumberNode `Literal` or `UnaryExpression` full number node
-         * @returns {boolean} true if the number is a default value
-         */
-        function isDefaultValue(fullNumberNode) {
-            const parent = fullNumberNode.parent;
-
-            return parent.type === "AssignmentPattern" && parent.right === fullNumberNode;
-        }
-
-        /**
-         * Returns whether the number is the initial value of a class field.
-         * @param {ASTNode} fullNumberNode `Literal` or `UnaryExpression` full number node
-         * @returns {boolean} true if the number is the initial value of a class field.
-         */
-        function isClassFieldInitialValue(fullNumberNode) {
-            const parent = fullNumberNode.parent;
-
-            return parent.type === "PropertyDefinition" && parent.value === fullNumberNode;
-        }
-
-        /**
-         * Returns whether the given node is used as a radix within parseInt() or Number.parseInt()
-         * @param {ASTNode} fullNumberNode `Literal` or `UnaryExpression` full number node
-         * @returns {boolean} true if the node is radix
-         */
-        function isParseIntRadix(fullNumberNode) {
-            const parent = fullNumberNode.parent;
-
-            return parent.type === "CallExpression" && fullNumberNode === parent.arguments[1] &&
-                (
-                    astUtils.isSpecificId(parent.callee, "parseInt") ||
-                    astUtils.isSpecificMemberAccess(parent.callee, "Number", "parseInt")
-                );
-        }
-
-        /**
-         * Returns whether the given node is a direct child of a JSX node.
-         * In particular, it aims to detect numbers used as prop values in JSX tags.
-         * Example: <input maxLength={10} />
-         * @param {ASTNode} fullNumberNode `Literal` or `UnaryExpression` full number node
-         * @returns {boolean} true if the node is a JSX number
-         */
-        function isJSXNumber(fullNumberNode) {
-            return fullNumberNode.parent.type.indexOf("JSX") === 0;
-        }
-
-        /**
-         * Returns whether the given node is used as an array index.
-         * Value must coerce to a valid array index name: "0", "1", "2" ... "4294967294".
-         *
-         * All other values, like "-1", "2.5", or "4294967295", are just "normal" object properties,
-         * which can be created and accessed on an array in addition to the array index properties,
-         * but they don't affect array's length and are not considered by methods such as .map(), .forEach() etc.
-         *
-         * The maximum array length by the specification is 2 ** 32 - 1 = 4294967295,
-         * thus the maximum valid index is 2 ** 32 - 2 = 4294967294.
-         *
-         * All notations are allowed, as long as the value coerces to one of "0", "1", "2" ... "4294967294".
-         *
-         * Valid examples:
-         * a[0], a[1], a[1.2e1], a[0xAB], a[0n], a[1n]
-         * a[-0] (same as a[0] because -0 coerces to "0")
-         * a[-0n] (-0n evaluates to 0n)
-         *
-         * Invalid examples:
-         * a[-1], a[-0xAB], a[-1n], a[2.5], a[1.23e1], a[12e-1]
-         * a[4294967295] (above the max index, it's an access to a regular property a["4294967295"])
-         * a[999999999999999999999] (even if it wasn't above the max index, it would be a["1e+21"])
-         * a[1e310] (same as a["Infinity"])
-         * @param {ASTNode} fullNumberNode `Literal` or `UnaryExpression` full number node
-         * @param {bigint|number} value Value expressed by the fullNumberNode
-         * @returns {boolean} true if the node is a valid array index
-         */
-        function isArrayIndex(fullNumberNode, value) {
-            const parent = fullNumberNode.parent;
-
-            return parent.type === "MemberExpression" && parent.property === fullNumberNode &&
-                (Number.isInteger(value) || typeof value === "bigint") &&
-                value >= 0 && value < MAX_ARRAY_LENGTH;
-        }
-
+});
+exports.default = (0, util_1.createRule)({
+    name: 'no-magic-numbers',
+    meta: {
+        type: 'suggestion',
+        docs: {
+            description: 'Disallow magic numbers',
+            extendsBaseRule: true,
+        },
+        schema: [schema],
+        messages: baseRule.meta.messages,
+    },
+    defaultOptions: [
+        {
+            ignore: [],
+            ignoreArrayIndexes: false,
+            enforceConst: false,
+            detectObjects: false,
+            ignoreNumericLiteralTypes: false,
+            ignoreEnums: false,
+            ignoreReadonlyClassProperties: false,
+        },
+    ],
+    create(context, [options]) {
+        const rules = baseRule.create(context);
         return {
             Literal(node) {
-                if (!astUtils.isNumericLiteral(node)) {
+                // If it’s not a numeric literal we’re not interested
+                if (typeof node.value !== 'number' && typeof node.value !== 'bigint') {
                     return;
                 }
-
-                let fullNumberNode;
-                let value;
-                let raw;
-
-                // Treat unary minus as a part of the number
-                if (node.parent.type === "UnaryExpression" && node.parent.operator === "-") {
-                    fullNumberNode = node.parent;
-                    value = -node.value;
-                    raw = `-${node.raw}`;
-                } else {
-                    fullNumberNode = node;
-                    value = node.value;
-                    raw = node.raw;
+                // This will be `true` if we’re configured to ignore this case (eg. it’s
+                // an enum and `ignoreEnums` is `true`). It will be `false` if we’re not
+                // configured to ignore this case. It will remain `undefined` if this is
+                // not one of our exception cases, and we’ll fall back to the base rule.
+                let isAllowed;
+                // Check if the node is a TypeScript enum declaration
+                if (isParentTSEnumDeclaration(node)) {
+                    isAllowed = options.ignoreEnums === true;
                 }
-
-                const parent = fullNumberNode.parent;
-
-                // Always allow radix arguments and JSX props
-                if (
-                    isIgnoredValue(value) ||
-                    (ignoreDefaultValues && isDefaultValue(fullNumberNode)) ||
-                    (ignoreClassFieldInitialValues && isClassFieldInitialValue(fullNumberNode)) ||
-                    isParseIntRadix(fullNumberNode) ||
-                    isJSXNumber(fullNumberNode) ||
-                    (ignoreArrayIndexes && isArrayIndex(fullNumberNode, value))
-                ) {
+                // Check TypeScript specific nodes for Numeric Literal
+                else if (isTSNumericLiteralType(node)) {
+                    isAllowed = options.ignoreNumericLiteralTypes === true;
+                }
+                // Check if the node is a type index
+                else if (isAncestorTSIndexedAccessType(node)) {
+                    isAllowed = options.ignoreTypeIndexes === true;
+                }
+                // Check if the node is a readonly class property
+                else if (isParentTSReadonlyPropertyDefinition(node)) {
+                    isAllowed = options.ignoreReadonlyClassProperties === true;
+                }
+                // If we’ve hit a case where the ignore option is true we can return now
+                if (isAllowed === true) {
                     return;
                 }
-
-                if (parent.type === "VariableDeclarator") {
-                    if (enforceConst && parent.parent.kind !== "const") {
-                        context.report({
-                            node: fullNumberNode,
-                            messageId: "useConst"
-                        });
+                // If the ignore option is *not* set we can report it now
+                else if (isAllowed === false) {
+                    let fullNumberNode = node;
+                    let raw = node.raw;
+                    if (node.parent.type === utils_1.AST_NODE_TYPES.UnaryExpression &&
+                        // the base rule only shows the operator for negative numbers
+                        // https://github.com/eslint/eslint/blob/9dfc8501fb1956c90dc11e6377b4cb38a6bea65d/lib/rules/no-magic-numbers.js#L126
+                        node.parent.operator === '-') {
+                        fullNumberNode = node.parent;
+                        raw = `${node.parent.operator}${node.raw}`;
                     }
-                } else if (
-                    !okTypes.includes(parent.type) ||
-                    (parent.type === "AssignmentExpression" && parent.left.type === "Identifier")
-                ) {
                     context.report({
+                        messageId: 'noMagic',
                         node: fullNumberNode,
-                        messageId: "noMagic",
-                        data: {
-                            raw
-                        }
+                        data: { raw },
                     });
+                    return;
                 }
-            }
+                // Let the base rule deal with the rest
+                rules.Literal(node);
+            },
         };
+    },
+});
+/**
+ * Gets the true parent of the literal, handling prefixed numbers (-1 / +1)
+ */
+function getLiteralParent(node) {
+    if (node.parent.type === utils_1.AST_NODE_TYPES.UnaryExpression &&
+        ['-', '+'].includes(node.parent.operator)) {
+        return node.parent.parent;
     }
-};
+    return node.parent;
+}
+/**
+ * Checks if the node grandparent is a Typescript type alias declaration
+ * @param node the node to be validated.
+ * @returns true if the node grandparent is a Typescript type alias declaration
+ * @private
+ */
+function isGrandparentTSTypeAliasDeclaration(node) {
+    return node.parent?.parent?.type === utils_1.AST_NODE_TYPES.TSTypeAliasDeclaration;
+}
+/**
+ * Checks if the node grandparent is a Typescript union type and its parent is a type alias declaration
+ * @param node the node to be validated.
+ * @returns true if the node grandparent is a Typescript union type and its parent is a type alias declaration
+ * @private
+ */
+function isGrandparentTSUnionType(node) {
+    if (node.parent?.parent?.type === utils_1.AST_NODE_TYPES.TSUnionType) {
+        return isGrandparentTSTypeAliasDeclaration(node.parent);
+    }
+    return false;
+}
+/**
+ * Checks if the node parent is a Typescript enum member
+ * @param node the node to be validated.
+ * @returns true if the node parent is a Typescript enum member
+ * @private
+ */
+function isParentTSEnumDeclaration(node) {
+    const parent = getLiteralParent(node);
+    return parent?.type === utils_1.AST_NODE_TYPES.TSEnumMember;
+}
+/**
+ * Checks if the node parent is a Typescript literal type
+ * @param node the node to be validated.
+ * @returns true if the node parent is a Typescript literal type
+ * @private
+ */
+function isParentTSLiteralType(node) {
+    return node.parent?.type === utils_1.AST_NODE_TYPES.TSLiteralType;
+}
+/**
+ * Checks if the node is a valid TypeScript numeric literal type.
+ * @param node the node to be validated.
+ * @returns true if the node is a TypeScript numeric literal type.
+ * @private
+ */
+function isTSNumericLiteralType(node) {
+    // For negative numbers, use the parent node
+    if (node.parent?.type === utils_1.AST_NODE_TYPES.UnaryExpression &&
+        node.parent.operator === '-') {
+        node = node.parent;
+    }
+    // If the parent node is not a TSLiteralType, early return
+    if (!isParentTSLiteralType(node)) {
+        return false;
+    }
+    // If the grandparent is a TSTypeAliasDeclaration, ignore
+    if (isGrandparentTSTypeAliasDeclaration(node)) {
+        return true;
+    }
+    // If the grandparent is a TSUnionType and it's parent is a TSTypeAliasDeclaration, ignore
+    if (isGrandparentTSUnionType(node)) {
+        return true;
+    }
+    return false;
+}
+/**
+ * Checks if the node parent is a readonly class property
+ * @param node the node to be validated.
+ * @returns true if the node parent is a readonly class property
+ * @private
+ */
+function isParentTSReadonlyPropertyDefinition(node) {
+    const parent = getLiteralParent(node);
+    if (parent?.type === utils_1.AST_NODE_TYPES.PropertyDefinition && parent.readonly) {
+        return true;
+    }
+    return false;
+}
+/**
+ * Checks if the node is part of a type indexed access (eg. Foo[4])
+ * @param node the node to be validated.
+ * @returns true if the node is part of an indexed access
+ * @private
+ */
+function isAncestorTSIndexedAccessType(node) {
+    // Handle unary expressions (eg. -4)
+    let ancestor = getLiteralParent(node);
+    // Go up another level while we’re part of a type union (eg. 1 | 2) or
+    // intersection (eg. 1 & 2)
+    while (ancestor?.parent?.type === utils_1.AST_NODE_TYPES.TSUnionType ||
+        ancestor?.parent?.type === utils_1.AST_NODE_TYPES.TSIntersectionType) {
+        ancestor = ancestor.parent;
+    }
+    return ancestor?.parent?.type === utils_1.AST_NODE_TYPES.TSIndexedAccessType;
+}
+//# sourceMappingURL=no-magic-numbers.js.map

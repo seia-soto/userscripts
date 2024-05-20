@@ -1,167 +1,143 @@
-/**
- * @fileoverview Rule to validate spacing before function paren.
- * @author Mathias Schreck <https://github.com/lo1tuma>
- * @deprecated in ESLint v8.53.0
- */
 "use strict";
-
-//------------------------------------------------------------------------------
-// Requirements
-//------------------------------------------------------------------------------
-
-const astUtils = require("./utils/ast-utils");
-
-//------------------------------------------------------------------------------
-// Rule Definition
-//------------------------------------------------------------------------------
-
-/** @type {import('../shared/types').Rule} */
-module.exports = {
+Object.defineProperty(exports, "__esModule", { value: true });
+const utils_1 = require("@typescript-eslint/utils");
+const eslint_utils_1 = require("@typescript-eslint/utils/eslint-utils");
+const util_1 = require("../util");
+exports.default = (0, util_1.createRule)({
+    name: 'space-before-function-paren',
     meta: {
         deprecated: true,
-        replacedBy: [],
-        type: "layout",
-
+        replacedBy: ['@stylistic/ts/space-before-function-paren'],
+        type: 'layout',
         docs: {
-            description: "Enforce consistent spacing before `function` definition opening parenthesis",
-            recommended: false,
-            url: "https://eslint.org/docs/latest/rules/space-before-function-paren"
+            description: 'Enforce consistent spacing before function parenthesis',
+            extendsBaseRule: true,
         },
-
-        fixable: "whitespace",
-
+        fixable: 'whitespace',
         schema: [
             {
                 oneOf: [
                     {
-                        enum: ["always", "never"]
+                        type: 'string',
+                        enum: ['always', 'never'],
                     },
                     {
-                        type: "object",
+                        type: 'object',
                         properties: {
                             anonymous: {
-                                enum: ["always", "never", "ignore"]
+                                type: 'string',
+                                enum: ['always', 'never', 'ignore'],
                             },
                             named: {
-                                enum: ["always", "never", "ignore"]
+                                type: 'string',
+                                enum: ['always', 'never', 'ignore'],
                             },
                             asyncArrow: {
-                                enum: ["always", "never", "ignore"]
-                            }
+                                type: 'string',
+                                enum: ['always', 'never', 'ignore'],
+                            },
                         },
-                        additionalProperties: false
-                    }
-                ]
-            }
+                        additionalProperties: false,
+                    },
+                ],
+            },
         ],
-
         messages: {
-            unexpectedSpace: "Unexpected space before function parentheses.",
-            missingSpace: "Missing space before function parentheses."
-        }
+            unexpected: 'Unexpected space before function parentheses.',
+            missing: 'Missing space before function parentheses.',
+        },
     },
-
-    create(context) {
-        const sourceCode = context.sourceCode;
-        const baseConfig = typeof context.options[0] === "string" ? context.options[0] : "always";
-        const overrideConfig = typeof context.options[0] === "object" ? context.options[0] : {};
-
+    defaultOptions: ['always'],
+    create(context, [firstOption]) {
+        const sourceCode = (0, eslint_utils_1.getSourceCode)(context);
+        const baseConfig = typeof firstOption === 'string' ? firstOption : 'always';
+        const overrideConfig = typeof firstOption === 'object' ? firstOption : {};
         /**
          * Determines whether a function has a name.
-         * @param {ASTNode} node The function node.
-         * @returns {boolean} Whether the function has a name.
+         * @param node The function node.
+         * @returns Whether the function has a name.
          */
         function isNamedFunction(node) {
-            if (node.id) {
+            if (node.id != null) {
                 return true;
             }
-
             const parent = node.parent;
-
-            return parent.type === "MethodDefinition" ||
-                (parent.type === "Property" &&
-                    (
-                        parent.kind === "get" ||
-                        parent.kind === "set" ||
-                        parent.method
-                    )
-                );
+            return (parent.type === utils_1.AST_NODE_TYPES.MethodDefinition ||
+                parent.type === utils_1.AST_NODE_TYPES.TSAbstractMethodDefinition ||
+                (parent.type === utils_1.AST_NODE_TYPES.Property &&
+                    (parent.kind === 'get' || parent.kind === 'set' || parent.method)));
         }
-
         /**
          * Gets the config for a given function
-         * @param {ASTNode} node The function node
-         * @returns {string} "always", "never", or "ignore"
+         * @param node The function node
          */
         function getConfigForFunction(node) {
-            if (node.type === "ArrowFunctionExpression") {
-
+            if (node.type === utils_1.AST_NODE_TYPES.ArrowFunctionExpression) {
                 // Always ignore non-async functions and arrow functions without parens, e.g. async foo => bar
-                if (node.async && astUtils.isOpeningParenToken(sourceCode.getFirstToken(node, { skip: 1 }))) {
-                    return overrideConfig.asyncArrow || baseConfig;
+                if (node.async &&
+                    (0, util_1.isOpeningParenToken)(sourceCode.getFirstToken(node, { skip: 1 }))) {
+                    return overrideConfig.asyncArrow ?? baseConfig;
                 }
-            } else if (isNamedFunction(node)) {
-                return overrideConfig.named || baseConfig;
-
-            // `generator-star-spacing` should warn anonymous generators. E.g. `function* () {}`
-            } else if (!node.generator) {
-                return overrideConfig.anonymous || baseConfig;
             }
-
-            return "ignore";
+            else if (isNamedFunction(node)) {
+                return overrideConfig.named ?? baseConfig;
+                // `generator-star-spacing` should warn anonymous generators. E.g. `function* () {}`
+            }
+            else if (!node.generator) {
+                return overrideConfig.anonymous ?? baseConfig;
+            }
+            return 'ignore';
         }
-
         /**
          * Checks the parens of a function node
-         * @param {ASTNode} node A function node
-         * @returns {void}
+         * @param node A function node
          */
         function checkFunction(node) {
             const functionConfig = getConfigForFunction(node);
-
-            if (functionConfig === "ignore") {
+            if (functionConfig === 'ignore') {
                 return;
             }
-
-            const rightToken = sourceCode.getFirstToken(node, astUtils.isOpeningParenToken);
-            const leftToken = sourceCode.getTokenBefore(rightToken);
+            let leftToken;
+            let rightToken;
+            if (node.typeParameters) {
+                leftToken = sourceCode.getLastToken(node.typeParameters);
+                rightToken = sourceCode.getTokenAfter(leftToken);
+            }
+            else {
+                rightToken = sourceCode.getFirstToken(node, util_1.isOpeningParenToken);
+                leftToken = sourceCode.getTokenBefore(rightToken);
+            }
+            // eslint-disable-next-line deprecation/deprecation -- TODO - switch once our min ESLint version is 6.7.0
             const hasSpacing = sourceCode.isSpaceBetweenTokens(leftToken, rightToken);
-
-            if (hasSpacing && functionConfig === "never") {
+            if (hasSpacing && functionConfig === 'never') {
                 context.report({
                     node,
                     loc: {
                         start: leftToken.loc.end,
-                        end: rightToken.loc.start
+                        end: rightToken.loc.start,
                     },
-                    messageId: "unexpectedSpace",
-                    fix(fixer) {
-                        const comments = sourceCode.getCommentsBefore(rightToken);
-
-                        // Don't fix anything if there's a single line comment between the left and the right token
-                        if (comments.some(comment => comment.type === "Line")) {
-                            return null;
-                        }
-                        return fixer.replaceTextRange(
-                            [leftToken.range[1], rightToken.range[0]],
-                            comments.reduce((text, comment) => text + sourceCode.getText(comment), "")
-                        );
-                    }
+                    messageId: 'unexpected',
+                    fix: fixer => fixer.removeRange([leftToken.range[1], rightToken.range[0]]),
                 });
-            } else if (!hasSpacing && functionConfig === "always") {
+            }
+            else if (!hasSpacing &&
+                functionConfig === 'always' &&
+                (!node.typeParameters || node.id)) {
                 context.report({
                     node,
                     loc: rightToken.loc,
-                    messageId: "missingSpace",
-                    fix: fixer => fixer.insertTextAfter(leftToken, " ")
+                    messageId: 'missing',
+                    fix: fixer => fixer.insertTextAfter(leftToken, ' '),
                 });
             }
         }
-
         return {
             ArrowFunctionExpression: checkFunction,
             FunctionDeclaration: checkFunction,
-            FunctionExpression: checkFunction
+            FunctionExpression: checkFunction,
+            TSEmptyBodyFunctionExpression: checkFunction,
+            TSDeclareFunction: checkFunction,
         };
-    }
-};
+    },
+});
+//# sourceMappingURL=space-before-function-paren.js.map

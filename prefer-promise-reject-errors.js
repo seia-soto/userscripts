@@ -1,132 +1,107 @@
-/**
- * @fileoverview restrict values that can be used as Promise rejection reasons
- * @author Teddy Katz
- */
 "use strict";
-
-const astUtils = require("./utils/ast-utils");
-
-//------------------------------------------------------------------------------
-// Rule Definition
-//------------------------------------------------------------------------------
-
-/** @type {import('../shared/types').Rule} */
-module.exports = {
+Object.defineProperty(exports, "__esModule", { value: true });
+const utils_1 = require("@typescript-eslint/utils");
+const eslint_utils_1 = require("@typescript-eslint/utils/eslint-utils");
+const util_1 = require("../util");
+exports.default = (0, util_1.createRule)({
+    name: 'prefer-promise-reject-errors',
     meta: {
-        type: "suggestion",
-
+        type: 'suggestion',
         docs: {
-            description: "Require using Error objects as Promise rejection reasons",
-            recommended: false,
-            url: "https://eslint.org/docs/latest/rules/prefer-promise-reject-errors"
+            description: 'Require using Error objects as Promise rejection reasons',
+            recommended: 'strict',
+            extendsBaseRule: true,
+            requiresTypeChecking: true,
         },
-
-        fixable: null,
-
         schema: [
             {
-                type: "object",
+                type: 'object',
                 properties: {
-                    allowEmptyReject: { type: "boolean", default: false }
+                    allowEmptyReject: {
+                        type: 'boolean',
+                    },
                 },
-                additionalProperties: false
-            }
+                additionalProperties: false,
+            },
         ],
-
         messages: {
-            rejectAnError: "Expected the Promise rejection reason to be an Error."
-        }
+            rejectAnError: 'Expected the Promise rejection reason to be an Error.',
+        },
     },
-
-    create(context) {
-
-        const ALLOW_EMPTY_REJECT = context.options.length && context.options[0].allowEmptyReject;
-        const sourceCode = context.sourceCode;
-
-        //----------------------------------------------------------------------
-        // Helpers
-        //----------------------------------------------------------------------
-
-        /**
-         * Checks the argument of a reject() or Promise.reject() CallExpression, and reports it if it can't be an Error
-         * @param {ASTNode} callExpression A CallExpression node which is used to reject a Promise
-         * @returns {void}
-         */
+    defaultOptions: [
+        {
+            allowEmptyReject: false,
+        },
+    ],
+    create(context, [options]) {
+        const services = (0, util_1.getParserServices)(context);
         function checkRejectCall(callExpression) {
-            if (!callExpression.arguments.length && ALLOW_EMPTY_REJECT) {
+            const argument = callExpression.arguments.at(0);
+            if (argument) {
+                const type = services.getTypeAtLocation(argument);
+                if ((0, util_1.isErrorLike)(services.program, type) ||
+                    (0, util_1.isReadonlyErrorLike)(services.program, type)) {
+                    return;
+                }
+            }
+            else if (options.allowEmptyReject) {
                 return;
             }
-            if (
-                !callExpression.arguments.length ||
-                !astUtils.couldBeError(callExpression.arguments[0]) ||
-                callExpression.arguments[0].type === "Identifier" && callExpression.arguments[0].name === "undefined"
-            ) {
-                context.report({
-                    node: callExpression,
-                    messageId: "rejectAnError"
-                });
-            }
+            context.report({
+                node: callExpression,
+                messageId: 'rejectAnError',
+            });
         }
-
-        /**
-         * Determines whether a function call is a Promise.reject() call
-         * @param {ASTNode} node A CallExpression node
-         * @returns {boolean} `true` if the call is a Promise.reject() call
-         */
-        function isPromiseRejectCall(node) {
-            return astUtils.isSpecificMemberAccess(node.callee, "Promise", "reject");
+        function skipChainExpression(node) {
+            return node.type === utils_1.AST_NODE_TYPES.ChainExpression
+                ? node.expression
+                : node;
         }
-
-        //----------------------------------------------------------------------
-        // Public
-        //----------------------------------------------------------------------
-
+        function typeAtLocationIsLikePromise(node) {
+            const type = services.getTypeAtLocation(node);
+            return ((0, util_1.isPromiseConstructorLike)(services.program, type) ||
+                (0, util_1.isPromiseLike)(services.program, type));
+        }
         return {
-
-            // Check `Promise.reject(value)` calls.
             CallExpression(node) {
-                if (isPromiseRejectCall(node)) {
-                    checkRejectCall(node);
+                const callee = skipChainExpression(node.callee);
+                if (callee.type !== utils_1.AST_NODE_TYPES.MemberExpression) {
+                    return;
                 }
+                const rejectMethodCalled = callee.computed
+                    ? callee.property.type === utils_1.AST_NODE_TYPES.Literal &&
+                        callee.property.value === 'reject'
+                    : callee.property.name === 'reject';
+                if (!rejectMethodCalled ||
+                    !typeAtLocationIsLikePromise(callee.object)) {
+                    return;
+                }
+                checkRejectCall(node);
             },
-
-            /*
-             * Check for `new Promise((resolve, reject) => {})`, and check for reject() calls.
-             * This function is run on "NewExpression:exit" instead of "NewExpression" to ensure that
-             * the nodes in the expression already have the `parent` property.
-             */
-            "NewExpression:exit"(node) {
-                if (
-                    node.callee.type === "Identifier" && node.callee.name === "Promise" &&
-                    node.arguments.length && astUtils.isFunction(node.arguments[0]) &&
-                    node.arguments[0].params.length > 1 && node.arguments[0].params[1].type === "Identifier"
-                ) {
-                    sourceCode.getDeclaredVariables(node.arguments[0])
-
-                        /*
-                         * Find the first variable that matches the second parameter's name.
-                         * If the first parameter has the same name as the second parameter, then the variable will actually
-                         * be "declared" when the first parameter is evaluated, but then it will be immediately overwritten
-                         * by the second parameter. It's not possible for an expression with the variable to be evaluated before
-                         * the variable is overwritten, because functions with duplicate parameters cannot have destructuring or
-                         * default assignments in their parameter lists. Therefore, it's not necessary to explicitly account for
-                         * this case.
-                         */
-                        .find(variable => variable.name === node.arguments[0].params[1].name)
-
-                        // Get the references to that variable.
-                        .references
-
-                        // Only check the references that read the parameter's value.
-                        .filter(ref => ref.isRead())
-
-                        // Only check the references that are used as the callee in a function call, e.g. `reject(foo)`.
-                        .filter(ref => ref.identifier.parent.type === "CallExpression" && ref.identifier === ref.identifier.parent.callee)
-
-                        // Check the argument of the function call to determine whether it's an Error.
-                        .forEach(ref => checkRejectCall(ref.identifier.parent));
+            NewExpression(node) {
+                const callee = skipChainExpression(node.callee);
+                if (!(0, util_1.isPromiseConstructorLike)(services.program, services.getTypeAtLocation(callee))) {
+                    return;
                 }
-            }
+                const executor = node.arguments.at(0);
+                if (!executor || !(0, util_1.isFunction)(executor)) {
+                    return;
+                }
+                const rejectParamNode = executor.params.at(1);
+                if (!rejectParamNode || !(0, util_1.isIdentifier)(rejectParamNode)) {
+                    return;
+                }
+                // reject param is always present in variables declared by executor
+                const rejectVariable = (0, eslint_utils_1.getDeclaredVariables)(context, executor).find(variable => variable.identifiers.includes(rejectParamNode));
+                rejectVariable.references.forEach(ref => {
+                    if (ref.identifier.parent.type !== utils_1.AST_NODE_TYPES.CallExpression ||
+                        ref.identifier !== ref.identifier.parent.callee) {
+                        return;
+                    }
+                    checkRejectCall(ref.identifier.parent);
+                });
+            },
         };
-    }
-};
+    },
+});
+//# sourceMappingURL=prefer-promise-reject-errors.js.map

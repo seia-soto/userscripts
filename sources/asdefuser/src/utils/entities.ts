@@ -83,7 +83,16 @@ export const tryCachedEntities = async () => {
 };
 
 export const putCachedEntities = (entities: Entity[]) => {
-	if (entities.length === 0) {
+	if (
+		entities.length === 0
+		|| entities.reduce((state, entity) => {
+			if (entity.type === EntityTypes.Head) {
+				return entity.html.length;
+			}
+
+			return entity.textContent.length;
+		}, 0) === 0
+	) {
 		return;
 	}
 

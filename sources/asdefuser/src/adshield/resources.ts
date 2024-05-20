@@ -1,6 +1,6 @@
 import {getRandomAdShieldHost} from './validators.js';
 
-export const predefinedToken = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJuYW1lIjoiIiwiZW1haWwiOiIiLCJleHAiOjE3MTI1MDI1ODUsImlhdCI6MTcxMjQxNjE4NX0.FizcDzueNDxj_5OKd7tlbQKV_A1f_PywPoDi5TkwaFg';
+export const predefinedToken = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJuYW1lIjoiIiwiZW1haWwiOiIiLCJleHAiOjE3MTYyNzQ5OTcsImlhdCI6MTcxNjE4ODU5N30.ilxZIf-3QXeqWp8hABYI7sw1SsAw6VnBI3rszVG6wCk';
 
 export const getCachableHtml = async (url: string) => {
 	const response = await fetch(url, {

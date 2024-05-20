@@ -4,6 +4,7 @@
   "description": "AdShield Defuser provides mitigation for AdShield trackers and advertisement services.",
   "type": "module",
   "scripts": {
+    "start": "pnpm build --bundle --watch --banner:js='$(cat ./banner.txt)' --outfile=./out/asdefuser-dev.user.js",
     "build": "esbuild src/index.ts --bundle --define:global=window --inject:./esbuild.inject.ts --target=es2018,chrome68,safari13,firefox88",
     "bundle": "pnpm build --outfile=./out/asdefuser.js",
     "compile": "cat ./banner.txt ./out/asdefuser.js > ./out/asdefuser.user.js"
